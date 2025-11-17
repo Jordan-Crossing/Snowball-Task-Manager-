@@ -1,0 +1,60 @@
+{
+  "name": "snowball-task-manager",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "build:electron": "tsc electron/main.ts --outDir dist-electron --module esnext --target esnext --moduleResolution bundler --esModuleInterop",
+    "electron": "npm run build:electron && electron .",
+    "electron:dev": "VITE_DEV_SERVER_URL=http://localhost:5173 npm run build:electron && electron .",
+    "package:linux": "npm run build && npm run build:electron && electron-builder --linux",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:build": "cd android && ANDROID_HOME=~/Android/Sdk JAVA_HOME=/usr/lib/jvm/java-21 ./gradlew assembleDebug",
+    "android:open": "npx cap open android",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "electron": "^39.2.1",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "vite": "^7.2.2"
+  },
+  "build": {
+    "appId": "com.snowball.taskmanager",
+    "productName": "Snowball Task Manager",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    }
+  }
+}
