@@ -38,3 +38,6 @@ android/.idea
 # Capacitor
 .capacitor
 ios
+
+# AI Assistant Context
+CLAUDE.md
