@@ -1,18 +1,17 @@
 /**
- * Database factory - Platform detection and singleton management
- * This module handles cross-platform database initialization
+ * Database factory - Three-way platform detection and singleton management
+ * Supports: Electron (better-sqlite3), Capacitor (native SQLite), Web (sql.js + IndexedDB)
  */
 
+import { Capacitor } from '@capacitor/core';
 import type { Database as DatabaseInterface } from './types';
 
 let dbInstance: DatabaseInterface | null = null;
 
 /**
  * Detect if running in Electron environment
- * @returns true if running in Electron, false otherwise
  */
 function isElectron(): boolean {
-  // Check for Electron-specific globals
   return (
     typeof window !== 'undefined' &&
     (typeof (window as any).electronAPI !== 'undefined' ||
@@ -22,8 +21,22 @@ function isElectron(): boolean {
 }
 
 /**
+ * Detect if running in Capacitor native environment
+ */
+function isCapacitorNative(): boolean {
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Get or create the database singleton
- * Automatically detects the platform and loads the appropriate implementation
+ * Automatically detects the platform and loads the appropriate implementation:
+ * 1. Electron → better-sqlite3 (native file-based SQLite)
+ * 2. Capacitor → Capacitor SQLite plugin (native SQLite)
+ * 3. Web → sql.js + IndexedDB (browser-based SQLite)
  *
  * @returns Promise resolving to Database instance
  * @throws Error if database initialization fails
@@ -42,21 +55,27 @@ export async function getDatabase(): Promise<DatabaseInterface> {
 
   try {
     if (isElectron()) {
-      // Load Electron implementation
+      // Electron: Use better-sqlite3 for native file-based SQLite
+      console.log('Detected Electron environment, using better-sqlite3');
       const { createElectronDB } = await import('./electron');
       const userDataPath = (window as any).electronAPI?.getUserDataPath?.() || './data';
       const dbPath = `${userDataPath}/todo.db`;
       dbInstance = await createElectronDB(dbPath);
-    } else {
-      // Load Capacitor implementation
+    } else if (isCapacitorNative()) {
+      // Capacitor: Use native SQLite plugin
+      console.log('Detected Capacitor native environment, using native SQLite');
       const { createCapacitorDB } = await import('./capacitor');
       dbInstance = await createCapacitorDB('todo');
+    } else {
+      // Web browser: Use sql.js + IndexedDB
+      console.log('Detected web browser, using sql.js + IndexedDB');
+      const { createWebDB } = await import('./web');
+      dbInstance = await createWebDB('todo');
     }
 
     return dbInstance;
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to initialize database: ${message}`);
   }
 }

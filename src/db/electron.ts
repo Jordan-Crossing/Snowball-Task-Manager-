@@ -8,6 +8,25 @@ import type { Database as DatabaseInterface } from './types';
 import { SCHEMA, INITIAL_DATA } from './schema';
 
 /**
+ * Check if a column exists in a table
+ */
+function columnExists(db: Database.Database, tableName: string, columnName: string): boolean {
+  const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  return tableInfo.some(col => col.name === columnName);
+}
+
+/**
+ * Run database migrations safely
+ */
+function runMigrations(db: Database.Database): void {
+  // Migration: Add is_folder column to tasks table
+  if (!columnExists(db, 'tasks', 'is_folder')) {
+    console.log('Running migration: Adding is_folder column to tasks table');
+    db.exec('ALTER TABLE tasks ADD COLUMN is_folder INTEGER DEFAULT 0 NOT NULL;');
+  }
+}
+
+/**
  * Initialize and return a better-sqlite3 database instance
  * Wraps the sync API to match the async Database interface
  *
@@ -25,6 +44,7 @@ export async function createElectronDB(dbPath: string): Promise<DatabaseInterfac
   try {
     db.exec(SCHEMA);
     db.exec(INITIAL_DATA);
+    runMigrations(db);
   } catch (error) {
     console.error('Failed to initialize database schema:', error);
     throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);

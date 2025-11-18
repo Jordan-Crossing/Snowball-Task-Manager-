@@ -28,12 +28,15 @@ export interface List {
 }
 
 /**
- * Projects table - Projects organized by Eisenhower Matrix and Maslow's hierarchy
+ * Projects table - Projects organized by Eisenhower Matrix and Maslow's hierarchy with hierarchy support
  */
 export interface Project {
   id: number;
   name: string;
   description?: string;
+  parent_project_id?: number; // FK to projects.id for nested projects
+  is_folder: boolean; // True if this is a folder/container for other projects
+  duration_minutes?: number; // Estimated duration in minutes
   quadrant?: 'Q1' | 'Q2' | 'Q3' | 'Q4'; // Eisenhower Matrix
   maslow_category?: string; // e.g., "Physiological", "Safety", "Love", "Esteem", "Self-actualization"
   maslow_subcategory?: string; // e.g., "Health", "Security", "Relationships"
@@ -52,6 +55,7 @@ export interface Task {
   context?: string; // Long-form notes
   duration_minutes?: number;
   parent_task_id?: number; // For nested tasks (FK to tasks.id)
+  is_folder: boolean; // True if this is a folder/container for other tasks
   project_id?: number; // FK to projects.id
   list_id?: number; // FK to lists.id
   flagged_for_today: boolean;
