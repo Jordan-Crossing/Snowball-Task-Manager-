@@ -16,8 +16,6 @@ import {
   Typography,
   Stack,
   Divider,
-  Checkbox,
-  FormControlLabel,
 } from '@mui/material';
 import { Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type { Project } from '../../db/types';
@@ -44,7 +42,6 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
   const [quadrant, setQuadrant] = useState<'Q1' | 'Q2' | 'Q3' | 'Q4' | ''>('');
   const [maslowCategory, setMaslowCategory] = useState<string>('');
   const [duration, setDuration] = useState<string>('');
-  const [isFolder, setIsFolder] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const isNewProject = !project;
@@ -57,7 +54,6 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
       setQuadrant(project.quadrant || '');
       setMaslowCategory(project.maslow_category || '');
       setDuration(project.duration_minutes ? formatDuration(project.duration_minutes) : '');
-      setIsFolder(project.is_folder || false);
     } else {
       // Clear form for new project
       setName('');
@@ -65,7 +61,6 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
       setQuadrant('');
       setMaslowCategory('');
       setDuration('');
-      setIsFolder(false);
     }
   }, [project, open]);
 
@@ -89,7 +84,6 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
         maslow_category: maslowCategory || undefined,
         maslow_subcategory: undefined, // Not using subcategories
         duration_minutes: duration ? parseDuration(duration) : undefined,
-        is_folder: isFolder,
       });
       onClose();
     } catch (error) {
@@ -227,17 +221,6 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             onChange={(e) => setDuration(e.target.value)}
             fullWidth
             helperText="Format: weeks (w), days (d), hours (h), minutes (m)"
-          />
-
-          {/* Is Folder */}
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={isFolder}
-                onChange={(e) => setIsFolder(e.target.checked)}
-              />
-            }
-            label="This is a folder (container for other projects)"
           />
         </Stack>
       </Box>

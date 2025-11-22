@@ -21,6 +21,7 @@ interface ProjectListProps {
   loading?: boolean;
   onProjectSelect: (projectId: number) => void;
   onCreateProject: () => void;
+  onMoveTaskToProject?: (taskId: number, projectId: number) => void;
   selectedProjectId?: number | null;
   // Search/filter/sort from parent
   searchQuery?: string;
@@ -40,6 +41,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   loading = false,
   onProjectSelect,
   onCreateProject,
+  onMoveTaskToProject,
   selectedProjectId,
   searchQuery = '',
   quadrantFilter = null,
@@ -139,10 +141,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 
   // Recursive render function for tree
   const renderProjectTree = (
-    projectNodes: ProjectWithChildren[],
+    items: ProjectWithChildren[],
     depth: number = 0
   ): React.ReactNode => {
-    return projectNodes.map((project) => (
+    return items.map((project) => (
       <React.Fragment key={project.id}>
         <ProjectItem
           project={project}
@@ -153,12 +155,12 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           hasChildren={!!project.children && project.children.length > 0}
           isExpanded={expandedFolders.has(project.id)}
           onToggleExpand={() => toggleFolder(project.id)}
+          allProjects={projects}
+          onMoveTaskToProject={onMoveTaskToProject}
         />
-        {/* Render children if expanded */}
-        {project.children &&
-          project.children.length > 0 &&
-          expandedFolders.has(project.id) &&
-          renderProjectTree(project.children, depth + 1)}
+        {project.children && expandedFolders.has(project.id) && (
+          renderProjectTree(project.children, depth + 1)
+        )}
       </React.Fragment>
     ));
   };

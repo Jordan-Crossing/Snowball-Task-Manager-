@@ -3,7 +3,7 @@
  * Shows full edit form for task details including subtasks
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   TextField,
@@ -20,14 +20,14 @@ import {
   CircularProgress,
   Chip,
   Divider,
-  Autocomplete,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import SaveIcon from '@mui/icons-material/Save';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import type { Task, List, Project, Tag } from '../../db/types';
 import { getMaslowCategories, getQuadrants, getQuadrantColor } from '../../constants';
+import { TagSelector } from '../Tags/TagSelector';
+import { ConfirmDialog } from '../common';
 
 interface TaskDetailProps {
   task?: Task;
@@ -47,7 +47,7 @@ interface TaskDetailProps {
 
 export const TaskDetail: React.FC<TaskDetailProps> = ({
   task,
-  lists = [],
+  lists: _lists = [],
   projects = [],
   tasks = [],
   tags = [],
@@ -64,7 +64,6 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
     task || {
       title: '',
       description: '',
-      context: '',
       duration_minutes: 0,
       quadrant: undefined,
       maslow_category: undefined,
@@ -73,12 +72,20 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
       list_id: undefined,
       flagged_for_today: false,
       is_repeating: false,
-      is_folder: false,
     }
   );
 
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving] = useState(false);
   const [selectedTags, setSelectedTags] = useState<(Tag | string)[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // Sync formData when task changes
+  useEffect(() => {
+    if (task) {
+      setFormData(task);
+    }
+  }, [task?.id]);
 
   // Sync selectedTags when task, tags, or taskTags changes
   useEffect(() => {
@@ -90,6 +97,28 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
       setSelectedTags([]);
     }
   }, [task, tags, taskTags]);
+
+  const performSave = (data: Partial<Task>, tags: (Tag | string)[]) => {
+    if (!task?.id) return;
+
+    const existingTagIds: number[] = [];
+    const newTagNames: string[] = [];
+
+    tags.forEach((tag) => {
+      if (typeof tag === 'string') {
+        newTagNames.push(tag);
+      } else {
+        existingTagIds.push(tag.id);
+      }
+    });
+
+    onSave?.(data, existingTagIds, newTagNames);
+  };
+
+  const handleTagsChange = (newTags: (Tag | string)[]) => {
+    setSelectedTags(newTags);
+    performSave(formData, newTags);
+  };
 
   // Get parent task if exists
   const parentTask = task?.parent_task_id
@@ -104,43 +133,37 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
     (t) => t.id !== task?.id && t.parent_task_id !== task?.id
   );
 
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Separate existing tag IDs from new tag names
-      const existingTagIds: number[] = [];
-      const newTagNames: string[] = [];
-
-      selectedTags.forEach((tag) => {
-        if (typeof tag === 'string') {
-          newTagNames.push(tag);
-        } else {
-          existingTagIds.push(tag.id);
-        }
-      });
-
-      await onSave?.(formData, existingTagIds, newTagNames);
-      onClose?.();
-    } finally {
-      setIsSaving(false);
+  const handleDeleteClick = () => {
+    if (onDelete && task) {
+      setDeleteDialogOpen(true);
     }
   };
 
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      try {
-        await onDelete?.();
-        onClose?.();
-      } catch (error) {
-        console.error('Failed to delete task:', error);
-      }
+  const handleConfirmDelete = () => {
+    if (onDelete && task) {
+      // @ts-ignore - onDelete signature mismatch in props vs usage
+      onDelete();
+    }
+  };
+
+  const handleChange = (field: keyof Task, value: any) => {
+    const newFormData = { ...formData, [field]: value };
+    setFormData(newFormData);
+
+    if (!task?.id) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    const immediateFields = ['duration_minutes', 'quadrant', 'maslow_category', 'list_id', 'project_id', 'flagged_for_today', 'is_repeating', 'parent_task_id'];
+    
+    if (immediateFields.includes(field)) {
+      performSave(newFormData, selectedTags);
+    } else {
+      saveTimeoutRef.current = setTimeout(() => {
+        performSave(newFormData, selectedTags);
+      }, 500);
     }
   };
 
@@ -157,7 +180,8 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
     : { p: 2 };
 
   return (
-    <Box sx={{ ...contentSx, height: '100%', overflow: 'auto' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ ...contentSx, flex: 1, overflow: 'auto' }}>
       {/* Header */}
       <Box
         sx={{
@@ -212,37 +236,6 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
           disabled={isSaving}
         />
 
-        {/* Context */}
-        <TextField
-          label="Context / Notes"
-          fullWidth
-          multiline
-          rows={3}
-          variant="outlined"
-          value={formData.context || ''}
-          onChange={(e) => handleChange('context', e.target.value)}
-          disabled={isSaving}
-          helperText="Long-form notes about this task"
-        />
-
-        {/* List Selector */}
-        <FormControl fullWidth>
-          <InputLabel>List</InputLabel>
-          <Select
-            label="List"
-            value={formData.list_id || ''}
-            onChange={(e) => handleChange('list_id', e.target.value || undefined)}
-            disabled={isSaving}
-          >
-            <MenuItem value="">None</MenuItem>
-            {lists.map((list) => (
-              <MenuItem key={list.id} value={list.id}>
-                {list.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
         {/* Project Selector */}
         <FormControl fullWidth>
           <InputLabel>Project</InputLabel>
@@ -296,8 +289,11 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
           label="Duration (minutes)"
           type="number"
           variant="outlined"
-          value={formData.duration_minutes || 0}
-          onChange={(e) => handleChange('duration_minutes', parseInt(e.target.value) || 0)}
+          value={formData.duration_minutes ?? ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            handleChange('duration_minutes', val === '' ? undefined : parseInt(val));
+          }}
           disabled={isSaving}
           inputProps={{ min: 0, step: 15 }}
         />
@@ -352,53 +348,10 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
         </FormControl>
 
         {/* Tags */}
-        <Autocomplete
-          multiple
-          freeSolo
-          options={tags}
-          getOptionLabel={(option) => {
-            if (typeof option === 'string') return option;
-            if ('name' in option) return option.name;
-            return '';
-          }}
-          isOptionEqualToValue={(option, value) => {
-            if (typeof option === 'string' && typeof value === 'string') {
-              return option === value;
-            }
-            if (typeof option === 'object' && typeof value === 'object' && 'id' in option && 'id' in value) {
-              return option.id === value.id;
-            }
-            return false;
-          }}
-          value={selectedTags}
-          onChange={(_, newValue) => {
-            setSelectedTags(newValue as (Tag | string)[]);
-          }}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const tagName = typeof option === 'string' ? option : option.name;
-              const tagColor = typeof option === 'string' ? undefined : option.color;
-              return (
-                <Chip
-                  label={tagName}
-                  {...getTagProps({ index })}
-                  size="small"
-                  sx={{
-                    bgcolor: tagColor || 'primary.main',
-                    color: 'white',
-                  }}
-                />
-              );
-            })
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Tags"
-              placeholder={selectedTags.length === 0 ? "Type to add tags..." : ""}
-              helperText={`${tags.length} tags available. Type and press Enter to create new.`}
-            />
-          )}
+        <TagSelector
+          tags={tags}
+          selectedTags={selectedTags}
+          onChange={handleTagsChange}
           disabled={isSaving}
         />
 
@@ -423,16 +376,6 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
               />
             }
             label="Repeating task"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.is_folder || false}
-                onChange={(e) => handleChange('is_folder', e.target.checked)}
-                disabled={isSaving}
-              />
-            }
-            label="Folder (container for other tasks)"
           />
         </Box>
 
@@ -468,39 +411,33 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({
           </Button>
         )}
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1, pt: 2 }}>
-          {task && onDelete && (
+        {/* Delete Button */}
+        {task && onDelete && (
+          <Box sx={{ pt: 2 }}>
             <Button
+              fullWidth
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               disabled={isSaving}
             >
-              Delete
+              Delete Task
             </Button>
-          )}
-          {onClose && (
-            <Button
-              variant="outlined"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            disabled={isSaving || !formData.title?.trim()}
-            sx={{ flex: 1 }}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </Button>
-        </Box>
+          </Box>
+        )}
       </Stack>
+      </Box>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Task?"
+        content="Are you sure you want to delete this task? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteDialogOpen(false)}
+        isDestructive
+      />
     </Box>
   );
 };

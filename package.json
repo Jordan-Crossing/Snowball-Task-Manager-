@@ -13,6 +13,7 @@
     "package:linux": "npm run build && npm run build:electron && electron-builder --linux",
     "android:sync": "npm run build && npx cap sync android",
     "android:build": "cd android && ANDROID_HOME=~/Android/Sdk JAVA_HOME=/usr/lib/jvm/java-21 ./gradlew assembleDebug",
+    "android:serve": "node scripts/serve-apk.cjs",
     "android:open": "npx cap open android",
     "lint": "eslint .",
     "preview": "vite preview"

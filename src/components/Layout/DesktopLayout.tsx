@@ -14,6 +14,7 @@ interface DesktopLayoutProps {
   onNavigate: (view: AppState['currentView'], id?: number) => void;
   onAddTask: () => void;
   onMoveTaskToProject?: (taskId: number, projectId: number) => void;
+  onDeleteTask?: (taskId: number) => void;
   onSelectProject?: (id: number | null) => void;
   onSelectList?: (id: number | null) => void;
   onSelectTask?: (id: number | null) => void;
@@ -22,6 +23,7 @@ interface DesktopLayoutProps {
   tags?: Array<{ id: number; name: string }>;
   children: React.ReactNode;
   detailPanel?: React.ReactNode;
+  inboxCount?: number;
 }
 
 export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
@@ -29,11 +31,13 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   onNavigate,
   onAddTask: _onAddTask,
   onMoveTaskToProject,
+  onDeleteTask,
   projects,
   lists,
   tags,
   children,
   detailPanel,
+  inboxCount,
 }) => {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -47,6 +51,8 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
           lists={lists}
           tags={tags}
           onMoveTaskToProject={onMoveTaskToProject}
+          onDeleteTask={onDeleteTask}
+          inboxCount={inboxCount}
         />
 
         {/* Miller Columns + Detail Panel */}

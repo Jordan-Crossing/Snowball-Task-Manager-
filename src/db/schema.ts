@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   description TEXT,
   parent_project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  is_folder BOOLEAN NOT NULL DEFAULT 0,
   duration_minutes INTEGER DEFAULT 0,
   quadrant TEXT CHECK (quadrant IS NULL OR quadrant IN ('Q1', 'Q2', 'Q3', 'Q4')),
   maslow_category TEXT,
@@ -48,18 +47,18 @@ CREATE TABLE IF NOT EXISTS tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
   description TEXT,
-  context TEXT,
   duration_minutes INTEGER,
   parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-  is_folder BOOLEAN NOT NULL DEFAULT 0,
   project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
   list_id INTEGER REFERENCES lists(id) ON DELETE SET NULL,
   flagged_for_today BOOLEAN NOT NULL DEFAULT 0,
   is_repeating BOOLEAN NOT NULL DEFAULT 0,
+  completed BOOLEAN NOT NULL DEFAULT 0,
   quadrant TEXT CHECK (quadrant IS NULL OR quadrant IN ('Q1', 'Q2', 'Q3', 'Q4')),
   maslow_category TEXT,
   maslow_subcategory TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
+  deleted_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -119,14 +118,5 @@ VALUES
  * These run after initial schema creation to update existing databases
  */
 export const MIGRATIONS = `
--- Migration: Add is_folder column to tasks table (if it doesn't exist)
--- This allows tasks to act as folders/containers for other tasks
--- Note: SQLite doesn't support "IF NOT EXISTS" for ALTER TABLE,
--- so migrations should be wrapped in try-catch or checked before running
-
--- Add parent_project_id to projects table for nested projects
--- ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE;
-
--- Add is_folder to projects table for project folders
--- ALTER TABLE projects ADD COLUMN is_folder INTEGER DEFAULT 0 NOT NULL;
+-- Migrations removed
 `;

@@ -35,7 +35,6 @@ export interface Project {
   name: string;
   description?: string;
   parent_project_id?: number; // FK to projects.id for nested projects
-  is_folder: boolean; // True if this is a folder/container for other projects
   duration_minutes?: number; // Estimated duration in minutes
   quadrant?: 'Q1' | 'Q2' | 'Q3' | 'Q4'; // Eisenhower Matrix
   maslow_category?: string; // e.g., "Physiological", "Safety", "Love", "Esteem", "Self-actualization"
@@ -52,20 +51,25 @@ export interface Task {
   id: number;
   title: string;
   description?: string;
-  context?: string; // Long-form notes
   duration_minutes?: number;
   parent_task_id?: number; // For nested tasks (FK to tasks.id)
-  is_folder: boolean; // True if this is a folder/container for other tasks
   project_id?: number; // FK to projects.id
   list_id?: number; // FK to lists.id
   flagged_for_today: boolean;
   is_repeating: boolean;
+  completed: boolean;
   quadrant?: 'Q1' | 'Q2' | 'Q3' | 'Q4';
   maslow_category?: string;
   maslow_subcategory?: string;
   sort_order: number;
+  deleted_at?: string; // ISO timestamp if soft-deleted
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskWithChildren extends Task {
+  children?: TaskWithChildren[];
+  totalChildrenDuration?: number;
 }
 
 /**

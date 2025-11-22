@@ -23,12 +23,11 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SaveIcon from '@mui/icons-material/Save';
 import { useTheme } from '../../theme';
-import { getDatabase, type Settings } from '../../db';
+import { useStore } from '../../store/useStore';
 
 export const SettingsView: React.FC = () => {
   const { mode, toggleTheme } = useTheme();
-  const [_settings, setSettings] = useState<Settings | null>(null);
-  const [_loading, setLoading] = useState(true);
+  const { settings, updateSettings } = useStore();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -37,56 +36,56 @@ export const SettingsView: React.FC = () => {
   const [cooldownTime, setCooldownTime] = useState('21:00');
   const [sleepTime, setSleepTime] = useState('22:00');
 
-  // Load settings on mount
+  // Load settings on mount or when settings change
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const db = await getDatabase();
-        const settingsData = await db.get<Settings>('SELECT * FROM settings WHERE id = 1');
-        if (settingsData) {
-          setSettings(settingsData);
-          setWakeUpTime(settingsData.wake_up_time || '07:00');
-          setCooldownTime(settingsData.cooldown_time || '21:00');
-          setSleepTime(settingsData.sleep_time || '22:00');
-        }
-      } catch (error) {
-        console.error('Failed to load settings:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadSettings();
-  }, []);
+    if (settings) {
+      setWakeUpTime(settings.wake_up_time || '07:00');
+      setCooldownTime(settings.cooldown_time || '21:00');
+      setSleepTime(settings.sleep_time || '22:00');
+    }
+  }, [settings]);
 
   const handleSave = async () => {
     setSaving(true);
-    setSaveMessage(null);
     try {
-      const db = await getDatabase();
-
-      // Check if settings row exists
-      const existing = await db.get<Settings>('SELECT * FROM settings WHERE id = 1');
-
-      if (existing) {
-        await db.run(
-          'UPDATE settings SET wake_up_time = ?, cooldown_time = ?, sleep_time = ?, updated_at = ? WHERE id = 1',
-          [wakeUpTime, cooldownTime, sleepTime, new Date().toISOString()]
-        );
-      } else {
-        await db.run(
-          'INSERT INTO settings (id, wake_up_time, cooldown_time, sleep_time, created_at, updated_at) VALUES (1, ?, ?, ?, ?, ?)',
-          [wakeUpTime, cooldownTime, sleepTime, new Date().toISOString(), new Date().toISOString()]
-        );
-      }
-
-      setSaveMessage('Settings saved successfully!');
+      await updateSettings({
+        wake_up_time: wakeUpTime,
+        cooldown_time: cooldownTime,
+        sleep_time: sleepTime,
+      });
+      setSaveMessage('Settings saved successfully');
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Failed to save settings:', error);
-      setSaveMessage('Failed to save settings. Please try again.');
+      setSaveMessage('Failed to save settings');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleExport = () => {
+    const state = useStore.getState();
+    const data = {
+      version: 1,
+      timestamp: new Date().toISOString(),
+      settings: state.settings,
+      lists: state.lists,
+      projects: state.projects,
+      tasks: state.tasks,
+      tags: state.tags,
+      taskTags: Array.from(state.taskTags.entries()),
+      completedToday: Array.from(state.completedToday)
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snowball-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -264,6 +263,24 @@ export const SettingsView: React.FC = () => {
                 <Typography variant="body2">Warning Color</Typography>
               </Paper>
             </Stack>
+          </Box>
+        </Stack>
+      </Card>
+
+      {/* Data Management Section */}
+      <Card sx={{ p: 3, mb: 3 }}>
+        <Stack spacing={2}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Data Management
+          </Typography>
+          <Divider />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button variant="outlined" onClick={handleExport}>
+              Export Data
+            </Button>
+            <Button variant="outlined" disabled>
+              Import Data (Coming Soon)
+            </Button>
           </Box>
         </Stack>
       </Card>

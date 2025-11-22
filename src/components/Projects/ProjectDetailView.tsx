@@ -22,13 +22,12 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-import FolderIcon from '@mui/icons-material/Folder';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import type { Project, Task } from '../../db/types';
+import type { Project, Task, Tag } from '../../db/types';
 import { TaskList } from '../Tasks/TaskList';
 import { getQuadrantColor, getMaslowEmoji, getQuadrants, getMaslowCategories } from '../../constants';
 import { parseDuration, formatDuration, formatAsWorkDays, isValidDuration } from '../../utils/duration';
@@ -37,34 +36,28 @@ interface ProjectDetailViewProps {
   project: Project;
   projects: Project[]; // All projects for finding parents and children
   tasks: Task[];
+  tags?: Tag[];
+  taskTags?: Map<number, number[]>;
   completedToday: Set<number>;
   onNavigateToProject: (projectId: number | null) => void;
   onEditProject: (project: Project) => void;
   onUpdateProject: (projectId: number, updates: Partial<Project>) => Promise<void>;
-  onTaskSelect: (taskId: number) => void;
-  onToggleComplete: (taskId: number) => void;
-  onToggleFlag: (taskId: number) => void;
   onAddTask: (title: string) => void;
   onAddSubProject: () => void;
-  onMakeSubtask: (taskId: number, parentTaskId: number) => void;
-  onReorderTask: (taskId: number, targetTaskId: number, position: 'before' | 'after') => void;
 }
 
 export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   project,
   projects,
   tasks,
+  tags = [],
+  taskTags = new Map(),
   completedToday,
   onNavigateToProject,
   onEditProject,
   onUpdateProject,
-  onTaskSelect,
-  onToggleComplete,
-  onToggleFlag,
   onAddTask,
   onAddSubProject,
-  onMakeSubtask,
-  onReorderTask,
 }) => {
   // Inline editing states
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -199,14 +192,14 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                 font: 'inherit',
               }}
             >
-              {p.is_folder ? <FolderIcon fontSize="small" /> : <AccountTreeIcon fontSize="small" />}
+              <AccountTreeIcon fontSize="small" />
               <span>{p.name}</span>
             </Link>
           ))}
 
           {/* Current project (not clickable) */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {project.is_folder ? <FolderIcon fontSize="small" /> : <AccountTreeIcon fontSize="small" />}
+            <AccountTreeIcon fontSize="small" />
             <Typography color="text.primary" sx={{ fontWeight: 600 }}>
               {project.name}
             </Typography>
@@ -449,11 +442,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {subProject.is_folder ? (
-                      <FolderIcon color="primary" />
-                    ) : (
-                      <AccountTreeIcon color="secondary" />
-                    )}
+                    <AccountTreeIcon color="secondary" />
                     <Typography sx={{ fontWeight: 500 }}>{subProject.name}</Typography>
                   </Box>
                   {subProject.description && (
@@ -485,11 +474,8 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           {/* Task list */}
           <TaskList
             tasks={projectTasks}
-            onTaskSelect={onTaskSelect}
-            onToggleComplete={onToggleComplete}
-            onToggleFlag={onToggleFlag}
-            onMakeSubtask={onMakeSubtask}
-            onReorderTask={onReorderTask}
+            tags={tags}
+            taskTags={taskTags}
             completedToday={completedToday}
             emptyMessage="No tasks in this project yet"
           />

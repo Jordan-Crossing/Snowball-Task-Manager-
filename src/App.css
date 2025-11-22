@@ -141,3 +141,16 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ===== Rotating Border Animation ===== */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-border {
+  to {
+    --angle: 360deg;
+  }
+}

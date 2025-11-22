@@ -17,13 +17,16 @@ import {
 } from '@mui/material';
 import TodayIcon from '@mui/icons-material/Today';
 import InboxIcon from '@mui/icons-material/Inbox';
-import FolderIcon from '@mui/icons-material/Folder';
+import FlagIcon from '@mui/icons-material/Flag';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import ListIcon from '@mui/icons-material/List';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SettingsIcon from '@mui/icons-material/Settings';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import BedtimeIcon from '@mui/icons-material/Bedtime';
+import ListIcon from '@mui/icons-material/List';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
 import type { AppState } from './useAppState';
@@ -36,6 +39,8 @@ interface SidebarProps {
   lists?: Array<{ id: number; name: string; type: string }>;
   tags?: Array<{ id: number; name: string }>;
   onMoveTaskToProject?: (taskId: number, projectId: number) => void;
+  onDeleteTask?: (taskId: number) => void;
+  inboxCount?: number;
 }
 
 interface ProjectItemProps {
@@ -44,6 +49,62 @@ interface ProjectItemProps {
   onClick: () => void;
   onMoveTaskToProject?: (taskId: number, projectId: number) => void;
 }
+
+const RubbishItem: React.FC<{
+  selected: boolean;
+  onClick: () => void;
+  onDeleteTask?: (taskId: number) => void;
+}> = ({ selected, onClick, onDeleteTask }) => {
+  const ref = useRef<HTMLLIElement>(null);
+  const [isOver, setIsOver] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !onDeleteTask) return;
+
+    return dropTargetForElements({
+      element: el,
+      getData: () => ({ type: 'trash' }),
+      canDrop: ({ source }) => source.data.type === 'task',
+      onDragEnter: () => setIsOver(true),
+      onDragLeave: () => setIsOver(false),
+      onDrop: ({ source }) => {
+        setIsOver(false);
+        const taskId = source.data.taskId as number;
+        if (taskId) {
+          onDeleteTask(taskId);
+        }
+      },
+    });
+  }, [onDeleteTask]);
+
+  return (
+    <ListItem
+      ref={ref}
+      disablePadding
+      sx={{
+        backgroundColor: isOver ? 'rgba(211, 47, 47, 0.08)' : 'transparent',
+        transition: 'background-color 0.2s ease',
+      }}
+    >
+      <ListItemButton
+        selected={selected}
+        onClick={onClick}
+      >
+        <ListItemIcon>
+          <DeleteOutlineIcon color={isOver ? 'error' : 'inherit'} />
+        </ListItemIcon>
+        <ListItemText 
+          primary="Rubbish" 
+          primaryTypographyProps={{
+            color: isOver ? 'error' : 'inherit',
+            fontWeight: isOver ? 'bold' : 'inherit'
+          }}
+        />
+      </ListItemButton>
+    </ListItem>
+  );
+};
 
 const ProjectItem: React.FC<ProjectItemProps> = ({ project, selected, onClick, onMoveTaskToProject }) => {
   const ref = useRef<HTMLLIElement>(null);
@@ -114,15 +175,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   lists = [],
   tags = [],
   onMoveTaskToProject,
+  onDeleteTask,
+  inboxCount = 0,
 }) => {
   const [projectsExpanded, setProjectsExpanded] = useState(true);
-  const [listsExpanded, setListsExpanded] = useState(true);
   const [tagsExpanded, setTagsExpanded] = useState(false);
-
-  const primaryItems = [
-    { label: 'Today', view: 'today' as const, icon: TodayIcon },
-    { label: 'Inbox', view: 'inbox' as const, icon: InboxIcon },
-  ];
 
   const sortedProjects = sortProjects(projects);
 
@@ -148,16 +205,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Primary Navigation */}
       <List sx={{ flex: 0, pb: 1 }}>
-        {primaryItems.map((item) => (
-          <ListItem key={item.view} disablePadding>
+        {/* Today */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={state.currentView === 'today'}
+            onClick={() => onNavigate('today')}
+          >
+            <ListItemIcon>
+              <TodayIcon />
+            </ListItemIcon>
+            <ListItemText primary="Today" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Inbox */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={state.currentView === 'inbox'}
+            onClick={() => onNavigate('inbox')}
+          >
+            <ListItemIcon>
+              <InboxIcon />
+            </ListItemIcon>
+            <ListItemText primary="Inbox" />
+            {inboxCount > 0 && (
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                {inboxCount}
+              </Typography>
+            )}
+          </ListItemButton>
+        </ListItem>
+
+        {/* Flagged */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={state.currentView === 'flagged'}
+            onClick={() => onNavigate('flagged')}
+          >
+            <ListItemIcon>
+              <FlagIcon />
+            </ListItemIcon>
+            <ListItemText primary="Flagged" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+
+      <Divider />
+
+      {/* Lists Section */}
+      <List sx={{ flex: 0 }}>
+        {lists?.filter(l => l.type !== 'inbox').map((list) => (
+          <ListItem key={list.id} disablePadding>
             <ListItemButton
-              selected={state.currentView === item.view}
-              onClick={() => onNavigate(item.view)}
+              selected={state.currentView === 'lists' && state.selectedListId === list.id}
+              onClick={() => onNavigate('lists', list.id)}
             >
               <ListItemIcon>
-                <item.icon />
+                {list.type === 'warmup' ? (
+                  <WbSunnyIcon />
+                ) : list.type === 'cooldown' ? (
+                  <BedtimeIcon />
+                ) : (
+                  <ListIcon />
+                )}
               </ListItemIcon>
-              <ListItemText primary={item.label} />
+              <ListItemText primary={list.name} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -165,49 +277,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <Divider />
 
-      {/* Lists Section */}
-      <List sx={{ flex: 0 }}>
-        <ListItemButton
-          selected={state.currentView === 'lists' && !state.selectedListId}
-          onClick={() => {
-            onNavigate('lists');
-            setListsExpanded(!listsExpanded);
-          }}
-        >
-          <ListItemIcon>
-            <ListIcon />
-          </ListItemIcon>
-          <ListItemText primary="Lists" />
-          {listsExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </ListItemButton>
-        <Collapse in={listsExpanded} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {lists.map((list) => (
-              <ListItem key={list.id} disablePadding sx={{ pl: 4 }}>
-                <ListItemButton
-                  selected={state.currentView === 'lists' && state.selectedListId === list.id}
-                  onClick={() => onNavigate('lists', list.id)}
-                  dense
-                >
-                  <ListItemText primary={list.name} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
-      </List>
-
       {/* Projects Section */}
       <List sx={{ flex: 0 }}>
         <ListItemButton
           selected={state.currentView === 'projects' && !state.selectedProjectId}
           onClick={() => {
-            onNavigate('projects');
+            onNavigate('projects', undefined);
             setProjectsExpanded(!projectsExpanded);
           }}
         >
           <ListItemIcon>
-            <FolderIcon />
+            <AccountTreeIcon />
           </ListItemIcon>
           <ListItemText primary="Projects" />
           {projectsExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -265,6 +345,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Settings */}
       <Divider />
       <List sx={{ flex: 0 }}>
+        <RubbishItem
+          selected={state.currentView === 'trash'}
+          onClick={() => onNavigate('trash')}
+          onDeleteTask={onDeleteTask}
+        />
         <ListItem disablePadding>
           <ListItemButton
             selected={state.currentView === 'settings'}

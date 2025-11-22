@@ -7,7 +7,6 @@ import React from 'react';
 import { Box, Typography, Breadcrumbs as MuiBreadcrumbs, Link } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import HomeIcon from '@mui/icons-material/Home';
-import FolderIcon from '@mui/icons-material/Folder';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import type { Project, Task } from '../../db/types';
@@ -46,13 +45,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
       const task = tasks.find((t) => t.id === item.id);
       if (!task) return null;
 
-      const icon = task.is_folder ? (
-        <FolderIcon fontSize="small" />
-      ) : (
-        <CheckBoxIcon fontSize="small" />
-      );
-
-      return { name: task.title, icon };
+      return { name: task.title, icon: <CheckBoxIcon fontSize="small" /> };
     }
   };
 

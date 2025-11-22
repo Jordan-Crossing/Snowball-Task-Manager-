@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 
 export interface AppState {
   // Navigation
-  currentView: 'today' | 'inbox' | 'projects' | 'lists' | 'tags' | 'settings';
+  currentView: 'today' | 'inbox' | 'projects' | 'lists' | 'tags' | 'settings' | 'flagged' | 'trash';
   selectedProjectId: number | null;
   selectedListId: number | null;
   selectedTaskId: number | null;

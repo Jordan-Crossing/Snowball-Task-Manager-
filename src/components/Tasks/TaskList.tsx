@@ -3,115 +3,156 @@
  * Displays tasks with proper indentation and grouping
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { List, Box, CircularProgress, Typography } from '@mui/material';
-import type { Task } from '../../db/types';
+import type { Task, Tag, TaskWithChildren } from '../../db/types';
 import { TaskItem } from './TaskItem';
-import { FilterSortBar } from '../common';
+import { FilterSortBar, type SortOption } from '../common';
+import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+import { useStore } from '../../store/useStore';
 
 interface TaskListProps {
   tasks: Task[];
+  tags?: Tag[];
+  taskTags?: Map<number, number[]>;
   loading?: boolean;
-  onTaskSelect?: (taskId: number) => void;
-  onToggleComplete?: (taskId: number) => void;
-  onToggleFlag?: (taskId: number) => void;
-  onMakeSubtask?: (taskId: number, parentTaskId: number) => void;
-  onReorderTask?: (taskId: number, targetTaskId: number, position: 'before' | 'after') => void;
   selectedTaskId?: number | null;
   completedToday?: Set<number>;
   emptyMessage?: string;
+  hideControls?: boolean;
+  separateCompleted?: boolean;
+  sortStrategy?: 'default' | 'quadrant-maslow';
 }
 
-interface TaskWithChildren extends Task {
-  children?: TaskWithChildren[];
+interface TaskTreeItemProps {
+  task: TaskWithChildren;
+  allTasksRef: React.MutableRefObject<Task[]>;
+  tags: Tag[];
+  taskTags: Map<number, number[]>;
+  depth: number;
+  completedToday: Set<number>;
+  selectedTaskId?: number | null;
+  selectedTaskIds?: number[];
+  colorIndex?: number;
 }
 
-function buildHierarchy(tasks: Task[]): TaskWithChildren[] {
-  const taskMap = new Map<number, TaskWithChildren>();
-  const roots: TaskWithChildren[] = [];
+const TaskTreeItem: React.FC<TaskTreeItemProps> = React.memo(({
+  task,
+  allTasksRef,
+  tags,
+  taskTags,
+  depth,
+  completedToday,
+  selectedTaskId,
+  selectedTaskIds = [],
+  colorIndex = 0,
+}) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<HTMLLIElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
-  // First pass: create all task nodes
-  tasks.forEach((task) => {
-    taskMap.set(task.id, { ...task, children: [] });
-  });
+  useEffect(() => {
+    const el = wrapperRef.current;
+    const handle = dragHandleRef.current;
+    if (!el || !handle) return;
 
-  // Second pass: build hierarchy
-  tasks.forEach((task) => {
-    const taskNode = taskMap.get(task.id)!;
-    if (task.parent_task_id) {
-      const parent = taskMap.get(task.parent_task_id);
-      if (parent) {
-        if (!parent.children) parent.children = [];
-        parent.children.push(taskNode);
-      } else {
-        roots.push(taskNode);
-      }
-    } else {
-      roots.push(taskNode);
-    }
-  });
+    return draggable({
+      element: el,
+      dragHandle: handle,
+      getInitialData: () => ({ taskId: task.id, type: 'task' }),
+      onDragStart: () => setIsDragging(true),
+      onDrop: () => setIsDragging(false),
+    });
+  }, [task.id]);
 
-  return roots;
-}
+  const isSelected = selectedTaskId === task.id || selectedTaskIds.includes(task.id);
+  const hasChildren = !!(task.children && task.children.length > 0);
 
-function renderTasks(
+  return (
+    <Box ref={wrapperRef} sx={{ opacity: isDragging ? 0.5 : 1 }}>
+      <TaskItem
+        task={task}
+        allTasksRef={allTasksRef}
+        tags={tags}
+        taskTags={taskTags}
+        depth={depth}
+        selected={isSelected}
+        completedToday={completedToday}
+        dragHandleRef={dragHandleRef as React.RefObject<HTMLElement>}
+        isDraggable={false} // Handled by wrapper
+        isDragging={isDragging}
+        totalChildrenDuration={task.totalChildrenDuration}
+        onToggleExpand={() => setIsExpanded(!isExpanded)}
+        isExpanded={isExpanded}
+        hasChildren={hasChildren}
+        colorIndex={colorIndex}
+      />
+      {isExpanded && hasChildren && (
+        <Box>
+          {task.children!.map((child) => (
+            <TaskTreeItem
+              key={child.id}
+              task={child}
+              allTasksRef={allTasksRef}
+              tags={tags}
+              taskTags={taskTags}
+              depth={depth + 1}
+              completedToday={completedToday}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              colorIndex={colorIndex}
+            />
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+});
+
+// Helper to render task list recursively
+const renderTasks = (
   tasks: TaskWithChildren[],
-  allTasks: Task[],
+  allTasksRef: React.MutableRefObject<Task[]>,
+  tags: Tag[] | undefined,
+  taskTags: Map<number, number[]> | undefined,
   depth: number,
-  onTaskSelect: (taskId: number) => void,
-  onToggleComplete: (taskId: number) => void,
-  onToggleFlag: (taskId: number) => void,
-  onMakeSubtask: (taskId: number, parentTaskId: number) => void,
-  onReorderTask: (taskId: number, targetTaskId: number, position: 'before' | 'after') => void,
   completedToday: Set<number>,
-  selectedTaskId?: number | null
-): React.ReactNode[] {
-  return tasks.flatMap((task) => [
-    <TaskItem
+  selectedTaskId: number | null | undefined,
+  selectedTaskIds: number[] = []
+) => {
+  return tasks.map((task, index) => (
+    <TaskTreeItem
       key={task.id}
       task={task}
-      allTasks={allTasks}
+      allTasksRef={allTasksRef}
+      tags={tags || []}
+      taskTags={taskTags || new Map()}
       depth={depth}
-      onSelect={onTaskSelect}
-      onToggleComplete={onToggleComplete}
-      onToggleFlag={onToggleFlag}
-      onMakeSubtask={onMakeSubtask}
-      onReorderTask={onReorderTask}
-      selected={selectedTaskId === task.id}
       completedToday={completedToday}
-    />,
-    ...(task.children && task.children.length > 0
-      ? renderTasks(
-          task.children,
-          allTasks,
-          depth + 1,
-          onTaskSelect,
-          onToggleComplete,
-          onToggleFlag,
-          onMakeSubtask,
-          onReorderTask,
-          completedToday,
-          selectedTaskId
-        )
-      : []),
-  ]);
-}
+      selectedTaskId={selectedTaskId}
+      selectedTaskIds={selectedTaskIds}
+      colorIndex={index}
+    />
+  ));
+};
 
 export const TaskList: React.FC<TaskListProps> = ({
   tasks,
+  tags,
+  taskTags,
   loading = false,
-  onTaskSelect = () => {},
-  onToggleComplete = () => {},
-  onToggleFlag = () => {},
-  onMakeSubtask = () => {},
-  onReorderTask = () => {},
   selectedTaskId,
   completedToday = new Set(),
   emptyMessage = 'No tasks yet',
+  hideControls = false,
+  separateCompleted = true,
+  sortStrategy = 'default',
 }) => {
+  const selectedTaskIds = useStore(state => state.selectedTaskIds);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBy, setFilterBy] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState('default');
+  const [sortBy, setSortBy] = useState<string>('sort_order-asc');
 
   // Filter and sort tasks
   const filteredAndSortedTasks = useMemo(() => {
@@ -123,8 +164,7 @@ export const TaskList: React.FC<TaskListProps> = ({
       result = result.filter(
         (task) =>
           task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query) ||
-          task.context?.toLowerCase().includes(query)
+          task.description?.toLowerCase().includes(query)
       );
     }
 
@@ -148,8 +188,30 @@ export const TaskList: React.FC<TaskListProps> = ({
       });
     }
 
-    // Sort (only for top-level tasks - hierarchy will be maintained)
+    // Sort
     result.sort((a, b) => {
+      if (sortStrategy === 'quadrant-maslow') {
+        // 1. Quadrant
+        const qOrder: Record<string, number> = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
+        const qA = qOrder[a.quadrant || ''] || 5;
+        const qB = qOrder[b.quadrant || ''] || 5;
+        if (qA !== qB) return qA - qB;
+
+        // 2. Maslow
+        const mOrder: Record<string, number> = {
+          'Physiological': 1,
+          'Safety': 2,
+          'Love & Belonging': 3,
+          'Esteem': 4,
+          'Self-actualization': 5
+        };
+        const mA = mOrder[a.maslow_category || ''] || 6;
+        const mB = mOrder[b.maslow_category || ''] || 6;
+        if (mA !== mB) return mA - mB;
+        
+        return a.sort_order - b.sort_order;
+      }
+
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -169,7 +231,7 @@ export const TaskList: React.FC<TaskListProps> = ({
     });
 
     return result;
-  }, [tasks, searchQuery, filterBy, sortBy, completedToday]);
+  }, [tasks, searchQuery, filterBy, sortBy, completedToday, sortStrategy]);
 
   const hasActiveFilters = searchQuery || filterBy.length > 0;
 
@@ -181,9 +243,31 @@ export const TaskList: React.FC<TaskListProps> = ({
     );
   }
 
-  const hierarchyTasks = buildHierarchy(filteredAndSortedTasks);
+  const [hierarchyTasks, setHierarchyTasks] = useState<TaskWithChildren[]>([]);
+  const workerRef = useRef<Worker | null>(null);
 
-  const sortOptions = [
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('../../workers/hierarchy.worker.ts', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      setHierarchyTasks(e.data);
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage(filteredAndSortedTasks);
+  }, [filteredAndSortedTasks]);
+  
+  // Separate completed tasks if requested
+  let activeTasks = hierarchyTasks;
+  let completedTasks: TaskWithChildren[] = [];
+
+  if (separateCompleted) {
+    activeTasks = hierarchyTasks.filter(t => !completedToday.has(t.id));
+    completedTasks = hierarchyTasks.filter(t => completedToday.has(t.id));
+  }
+
+  const sortOptions: SortOption[] = [
     { value: 'default', label: 'Default Order' },
     { value: 'title', label: 'Title (A-Z)' },
     { value: 'title-desc', label: 'Title (Z-A)' },
@@ -208,20 +292,27 @@ export const TaskList: React.FC<TaskListProps> = ({
     { value: 'Self-actualization', label: '🎯 Self-actualization' },
   ];
 
+  const tasksRef = useRef(tasks);
+  useEffect(() => {
+    tasksRef.current = filteredAndSortedTasks;
+  }, [filteredAndSortedTasks]);
+
   if (hierarchyTasks.length === 0) {
     return (
       <Box>
-        <FilterSortBar
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder="Search tasks..."
-          sortValue={sortBy}
-          sortOptions={sortOptions}
-          onSortChange={setSortBy}
-          filterValues={filterBy}
-          filterOptions={filterOptions}
-          onFilterChange={setFilterBy}
-        />
+        {!hideControls && (
+          <FilterSortBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search tasks..."
+            sortValue={sortBy}
+            sortOptions={sortOptions}
+            onSortChange={setSortBy}
+            filterValues={filterBy}
+            filterOptions={filterOptions}
+            onFilterChange={setFilterBy}
+          />
+        )}
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <Typography color="textSecondary">
             {hasActiveFilters ? 'No tasks match your filters' : emptyMessage}
@@ -233,29 +324,50 @@ export const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <Box>
-      <FilterSortBar
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder="Search tasks..."
-        sortValue={sortBy}
-        sortOptions={sortOptions}
-        onSortChange={setSortBy}
-        filterValues={filterBy}
-        filterOptions={filterOptions}
-        onFilterChange={setFilterBy}
-      />
-      <List sx={{ width: '100%' }}>
+      {!hideControls && (
+        <FilterSortBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search tasks..."
+          sortValue={sortBy}
+          sortOptions={sortOptions}
+          onSortChange={setSortBy}
+          filterValues={filterBy}
+          filterOptions={filterOptions}
+          onFilterChange={setFilterBy}
+        />
+      )}
+
+      {separateCompleted && completedTasks.length > 0 && (
+        <Box sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ px: 2, mb: 1 }}>
+            Completed
+          </Typography>
+          <List sx={{ width: '100%', opacity: 0.7 }} component="div">
+            {renderTasks(
+              completedTasks,
+              tasksRef,
+              tags,
+              taskTags,
+              0,
+              completedToday,
+              selectedTaskId,
+              selectedTaskIds
+            )}
+          </List>
+        </Box>
+      )}
+
+      <List sx={{ width: '100%' }} component="div">
         {renderTasks(
-          hierarchyTasks,
-          tasks,
+          activeTasks,
+          tasksRef,
+          tags,
+          taskTags,
           0,
-          onTaskSelect,
-          onToggleComplete,
-          onToggleFlag,
-          onMakeSubtask,
-          onReorderTask,
           completedToday,
-          selectedTaskId
+          selectedTaskId,
+          selectedTaskIds
         )}
       </List>
     </Box>

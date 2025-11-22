@@ -8,25 +8,6 @@ import type { Database as DatabaseInterface } from './types';
 import { SCHEMA, INITIAL_DATA } from './schema';
 
 /**
- * Check if a column exists in a table
- */
-function columnExists(db: Database.Database, tableName: string, columnName: string): boolean {
-  const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
-  return tableInfo.some(col => col.name === columnName);
-}
-
-/**
- * Run database migrations safely
- */
-function runMigrations(db: Database.Database): void {
-  // Migration: Add is_folder column to tasks table
-  if (!columnExists(db, 'tasks', 'is_folder')) {
-    console.log('Running migration: Adding is_folder column to tasks table');
-    db.exec('ALTER TABLE tasks ADD COLUMN is_folder INTEGER DEFAULT 0 NOT NULL;');
-  }
-}
-
-/**
  * Initialize and return a better-sqlite3 database instance
  * Wraps the sync API to match the async Database interface
  *
@@ -39,12 +20,18 @@ export async function createElectronDB(dbPath: string): Promise<DatabaseInterfac
 
   // Enable foreign keys (required for referential integrity)
   db.pragma('foreign_keys = ON');
+  
+  // Performance optimizations - Load DB into RAM
+  db.pragma('journal_mode = WAL'); // Write-Ahead Logging for concurrency
+  db.pragma('synchronous = NORMAL'); // Faster writes, safe with WAL
+  db.pragma('temp_store = MEMORY'); // Store temp tables in RAM
+  db.pragma('cache_size = -64000'); // 64MB page cache
+  db.pragma('mmap_size = 30000000000'); // Memory map the database file (up to ~30GB)
 
   // Initialize schema
   try {
     db.exec(SCHEMA);
     db.exec(INITIAL_DATA);
-    runMigrations(db);
   } catch (error) {
     console.error('Failed to initialize database schema:', error);
     throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);

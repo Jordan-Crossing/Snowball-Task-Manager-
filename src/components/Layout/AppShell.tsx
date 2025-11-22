@@ -18,6 +18,8 @@ interface AppShellProps {
   tags?: Array<{ id: number; name: string }>;
   onAddTask: () => void;
   onMoveTaskToProject?: (taskId: number, projectId: number) => Promise<void>;
+  onDeleteTask?: (taskId: number) => void;
+  inboxCount?: number;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({
@@ -28,6 +30,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   tags,
   onAddTask,
   onMoveTaskToProject,
+  onDeleteTask,
+  inboxCount,
 }) => {
   const { isMobile, isDesktop } = useResponsive();
 
@@ -80,10 +84,12 @@ export const AppShell: React.FC<AppShellProps> = ({
         onNavigate={navigateTo}
         onAddTask={onAddTask}
         onMoveTaskToProject={onMoveTaskToProject}
+        onDeleteTask={onDeleteTask}
         projects={projects}
         lists={lists}
         tags={tags}
         detailPanel={detailPanel}
+        inboxCount={inboxCount}
       >
         {children}
       </DesktopLayout>

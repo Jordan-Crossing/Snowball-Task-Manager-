@@ -146,19 +146,7 @@ export async function createWebDB(_dbName: string): Promise<DatabaseInterface> {
   } else {
     // Run migrations on existing database
     try {
-      // Check if is_folder column exists in tasks table
-      const tableInfo = db.exec('PRAGMA table_info(tasks)');
-      const columnExists = tableInfo.length > 0 &&
-        tableInfo[0].values.some((row: any) => row[1] === 'is_folder');
-
-      if (!columnExists) {
-        console.log('Running migration: Adding is_folder column to tasks table');
-        db.run('ALTER TABLE tasks ADD COLUMN is_folder INTEGER DEFAULT 0 NOT NULL;');
-
-        // Save to IndexedDB after migration
-        const exported = db.export();
-        await saveToIndexedDB(exported);
-      }
+      // Migrations removed
     } catch (error) {
       console.error('Migration failed:', error);
       throw new Error(

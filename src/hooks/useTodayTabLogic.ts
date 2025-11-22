@@ -5,7 +5,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 
-export type TodayTab = 'morning' | 'today' | 'cooldown' | 'fun';
+export type TodayTab = 'morning' | 'today' | 'cooldown';
 
 interface TimeConfig {
   wakeUpTime?: string; // HH:MM format
@@ -56,11 +56,9 @@ export function useTodayTabLogic(
   }, []);
 
   const defaultTab = useMemo<TodayTab>(() => {
-    const cooldownTime = timeConfig.cooldownTime || '18:00';
-    const sleepTime = timeConfig.sleepTime || '22:00';
+    const cooldownTime = timeConfig.cooldownTime || '17:00';
 
     const cooldownMinutes = parseTime(cooldownTime);
-    const sleepMinutes = parseTime(sleepTime);
     const currentMinutes = getCurrentMinutes();
 
     // 1. If morning tasks not complete → show Morning tab
@@ -73,12 +71,7 @@ export function useTodayTabLogic(
       return 'cooldown';
     }
 
-    // 3. If cooldown complete AND before bedtime → show Fun tab
-    if (taskCompletion.cooldownTasksComplete && currentMinutes < sleepMinutes) {
-      return 'fun';
-    }
-
-    // 4. Otherwise → show Today tab
+    // 3. Otherwise → show Today tab
     return 'today';
   }, [timeConfig, taskCompletion, currentTime]);
 
