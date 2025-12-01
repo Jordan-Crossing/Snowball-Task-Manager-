@@ -61,6 +61,13 @@ const TaskTreeItem: React.FC<TaskTreeItemProps> = React.memo(({
       element: el,
       dragHandle: handle,
       getInitialData: () => ({ taskId: task.id, type: 'task' }),
+      onGenerateDragPreview: ({ nativeSetDragImage }) => {
+        // Use the handle (TaskItem) as the preview, excluding children
+        // Set offset to 0,0 to grab from top-left, or we could center it
+        if (handle && nativeSetDragImage) {
+            nativeSetDragImage(handle, 0, 0);
+        }
+      },
       onDragStart: () => setIsDragging(true),
       onDrop: () => setIsDragging(false),
     });

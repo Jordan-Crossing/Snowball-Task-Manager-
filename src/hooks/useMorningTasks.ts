@@ -14,6 +14,6 @@ export function useMorningTasks(): Task[] {
     const warmupList = lists.find(l => l.type === 'warmup');
     if (!warmupList) return [];
 
-    return tasks.filter(task => task.list_id === warmupList.id);
+    return tasks.filter(task => task.list_id === warmupList.id && !task.project_id);
   }, [tasks, lists]);
 }

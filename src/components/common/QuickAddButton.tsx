@@ -76,6 +76,7 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({
           onClick={handleOpen}
           sx={fabSx[position]}
           size="large"
+          disableRipple
         >
           <AddIcon sx={{ fontSize: '1.5rem' }} />
         </Fab>

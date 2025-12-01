@@ -133,4 +133,10 @@ export interface Database {
    * Close the database connection
    */
   close(): Promise<void>;
+
+  /**
+   * Reset the database to its initial state
+   * Drops all tables and recreates the schema with default data
+   */
+  reset(): Promise<void>;
 }

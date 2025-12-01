@@ -58,7 +58,10 @@ export async function getDatabase(): Promise<DatabaseInterface> {
       // Electron: Use better-sqlite3 for native file-based SQLite
       console.log('Detected Electron environment, using better-sqlite3');
       const { createElectronDB } = await import('./electron');
-      const userDataPath = (window as any).electronAPI?.getUserDataPath?.() || './data';
+      // We don't need the path for the renderer side anymore as it's handled by main process
+      // but we'll keep the variable for logging if needed
+      const userDataPath = await (window as any).electronAPI?.getUserDataPath?.() || './data';
+      console.log('User data path:', userDataPath);
       const dbPath = `${userDataPath}/todo.db`;
       dbInstance = await createElectronDB(dbPath);
     } else if (isCapacitorNative()) {

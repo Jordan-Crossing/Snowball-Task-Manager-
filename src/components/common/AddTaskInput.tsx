@@ -15,11 +15,22 @@ export const AddTaskInput: React.FC<AddTaskInputProps> = ({
 }) => {
   const [value, setValue] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     if (value.trim()) {
       onAdd(value.trim());
       setValue('');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submit();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submit();
     }
   };
 
@@ -51,6 +62,7 @@ export const AddTaskInput: React.FC<AddTaskInputProps> = ({
         placeholder={placeholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         inputProps={{ 'aria-label': 'add task' }}
       />
       <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />

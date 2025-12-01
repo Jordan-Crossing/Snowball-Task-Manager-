@@ -275,5 +275,26 @@ export async function createWebDB(_dbName: string): Promise<DatabaseInterface> {
         );
       }
     },
+
+    /**
+     * Reset the database to its initial state
+     */
+    async reset(): Promise<void> {
+      try {
+        // Drop all tables
+        const tables = ['tasks', 'projects', 'lists', 'tags', 'task_tags', 'task_completions', 'settings'];
+        for (const table of tables) {
+          db.run(`DROP TABLE IF EXISTS ${table}`);
+        }
+        
+        // Re-initialize schema and data
+        db.run(SCHEMA);
+        db.run(INITIAL_DATA);
+        
+        await autoSave();
+      } catch (error) {
+        throw new Error(`Failed to reset database: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    },
   };
 }

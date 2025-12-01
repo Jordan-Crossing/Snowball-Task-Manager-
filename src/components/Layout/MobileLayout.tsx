@@ -3,7 +3,7 @@
  * Single column view with hamburger menu and full-screen navigation
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   AppBar,
@@ -31,6 +31,12 @@ interface MobileLayoutProps {
   children: React.ReactNode;
 }
 
+const TAB_BACKGROUNDS = {
+  morning: 'linear-gradient(180deg, rgba(255, 154, 158, 0.15) 0%, rgba(254, 207, 239, 0.05) 100%)',
+  today: 'linear-gradient(180deg, rgba(161, 196, 253, 0.15) 0%, rgba(194, 233, 251, 0.05) 100%)',
+  cooldown: 'linear-gradient(180deg, rgba(48, 207, 208, 0.15) 0%, rgba(51, 8, 103, 0.05) 100%)',
+};
+
 export const MobileLayout: React.FC<MobileLayoutProps> = ({
   state,
   mobileMenuOpen,
@@ -45,6 +51,30 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   children,
 }) => {
   const theme = useTheme();
+  const [headerBackground, setHeaderBackground] = useState<string>('background.paper');
+
+  useEffect(() => {
+    const handleTabChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const tab = customEvent.detail.tab;
+      if (state.currentView === 'today' && TAB_BACKGROUNDS[tab as keyof typeof TAB_BACKGROUNDS]) {
+        setHeaderBackground(TAB_BACKGROUNDS[tab as keyof typeof TAB_BACKGROUNDS]);
+      } else {
+        setHeaderBackground('background.paper');
+      }
+    };
+
+    window.addEventListener('snowball-tab-change', handleTabChange);
+    
+    // Reset if view changes
+    if (state.currentView !== 'today') {
+      setHeaderBackground('background.paper');
+    }
+
+    return () => {
+      window.removeEventListener('snowball-tab-change', handleTabChange);
+    };
+  }, [state.currentView]);
 
   // Render breadcrumb with clickable parts
   const renderBreadcrumb = () => {
@@ -134,11 +164,15 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         position="static"
         elevation={0}
         sx={{
-          bgcolor: 'background.paper',
+          background: headerBackground === 'background.paper' 
+            ? theme.palette.background.paper 
+            : `${headerBackground}, ${theme.palette.background.default}`,
           borderBottom: 1,
           borderColor: 'divider',
           color: 'text.primary',
-          paddingTop: 'env(safe-area-inset-top)',
+          paddingTop: 'calc(env(safe-area-inset-top) + 12px)',
+          borderRadius: 0,
+          transition: 'background 0.3s ease',
         }}
       >
         <Toolbar sx={{ py: 1.5, minHeight: '56px !important', px: 2 }}>
@@ -148,6 +182,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
             aria-label="menu"
             onClick={() => onMenuOpen(true)}
             sx={{ mr: 2 }}
+            disableRipple
           >
             <MenuIcon />
           </IconButton>

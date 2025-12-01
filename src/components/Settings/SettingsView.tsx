@@ -27,7 +27,7 @@ import { useStore } from '../../store/useStore';
 
 export const SettingsView: React.FC = () => {
   const { mode, toggleTheme } = useTheme();
-  const { settings, updateSettings } = useStore();
+  const { settings, updateSettings, resetDatabase } = useStore();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -274,12 +274,23 @@ export const SettingsView: React.FC = () => {
             Data Management
           </Typography>
           <Divider />
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Button variant="outlined" onClick={handleExport}>
               Export Data
             </Button>
             <Button variant="outlined" disabled>
               Import Data (Coming Soon)
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              onClick={() => {
+                if (window.confirm('Are you sure you want to reset the database? This will delete ALL data and cannot be undone.')) {
+                  resetDatabase();
+                }
+              }}
+            >
+              Reset Database
             </Button>
           </Box>
         </Stack>

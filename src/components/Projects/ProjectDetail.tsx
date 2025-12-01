@@ -148,6 +148,12 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             label="Project Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+              }
+            }}
             required
             fullWidth
             autoFocus

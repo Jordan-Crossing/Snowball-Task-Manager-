@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, CircularProgress, Typography, useTheme } from '@mui/material';
-import { TimeProgress } from './TimeProgress';
+// import { TimeProgress } from './TimeProgress';
 import { TaskList } from '../Tasks/TaskList';
 import { useTodayTabLogic, type TodayTab } from '../../hooks';
 import type { Task, Tag } from '../../db/types';
@@ -54,8 +54,8 @@ export const TodayView: React.FC<TodayViewProps> = ({
   taskTags = new Map(),
   morningTasksComplete = false,
   cooldownTasksComplete = false,
-  totalTaskDurationMinutes = 0,
-  incompleteTasks = 0,
+  // totalTaskDurationMinutes = 0,
+  // incompleteTasks = 0,
   loading = false,
   selectedTaskId,
   completedToday = new Set(),
@@ -77,7 +77,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
   // const [prevTab, setPrevTab] = useState<TodayTab>(defaultTab);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
+  // const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
 
   // Update active tab when default tab changes (e.g., time passes or tasks completed)
   useEffect(() => {
@@ -87,11 +87,17 @@ export const TodayView: React.FC<TodayViewProps> = ({
     }
   }, [defaultTab]);
 
+  // Expose active tab to parent via custom event for header color change
+  useEffect(() => {
+    const event = new CustomEvent('snowball-tab-change', { detail: { tab: activeTab } });
+    window.dispatchEvent(event);
+  }, [activeTab]);
+
   const handleTabChange = (newTab: TodayTab) => {
-    const tabsOrder: TodayTab[] = ['morning', 'today', 'cooldown'];
-    const currentIndex = tabsOrder.indexOf(activeTab);
-    const newIndex = tabsOrder.indexOf(newTab);
-    setSlideDirection(newIndex > currentIndex ? 'left' : 'right');
+    // const tabsOrder: TodayTab[] = ['morning', 'today', 'cooldown'];
+    // const currentIndex = tabsOrder.indexOf(activeTab);
+    // const newIndex = tabsOrder.indexOf(newTab);
+    // setSlideDirection(newIndex > currentIndex ? 'left' : 'right');
     // setPrevTab(activeTab);
     setActiveTab(newTab);
   };
@@ -179,8 +185,8 @@ export const TodayView: React.FC<TodayViewProps> = ({
         }}
       />
 
-      {/* Time Progress */}
-      <Box sx={{ p: 2, pb: 0, zIndex: 1 }}>
+      {/* Time Progress - Removed as per request */}
+      {/* <Box sx={{ p: 2, pb: 0, zIndex: 1 }}>
         <TimeProgress
           wakeUpTime={settings.wake_up_time}
           cooldownTime={settings.cooldown_time}
@@ -188,7 +194,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
           totalTaskDurationMinutes={totalTaskDurationMinutes}
           incompleteTasks={incompleteTasks}
         />
-      </Box>
+      </Box> */}
 
       {/* Content Area with Swipe */}
       <Box 
@@ -217,15 +223,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
               flex: 1,
               height: '100%',
               overflow: 'auto',
-              animation: `${slideDirection === 'left' ? 'slideInRight' : 'slideInLeft'} 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
-              '@keyframes slideInRight': {
-                '0%': { opacity: 0, transform: 'translateX(20px)' },
-                '100%': { opacity: 1, transform: 'translateX(0)' },
-              },
-              '@keyframes slideInLeft': {
-                '0%': { opacity: 0, transform: 'translateX(-20px)' },
-                '100%': { opacity: 1, transform: 'translateX(0)' },
-              }
+              // Animation removed as per request
             }}
           >
             {activeTab === 'morning' && (

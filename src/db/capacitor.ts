@@ -194,5 +194,42 @@ export async function createCapacitorDB(dbName: string): Promise<DatabaseInterfa
         }
       }
     },
+
+    /**
+     * Reset the database to its initial state
+     */
+    async reset(): Promise<void> {
+      if (!db) {
+        throw new Error('Database connection is closed');
+      }
+      try {
+        // Drop all tables
+        const tables = ['tasks', 'projects', 'lists', 'tags', 'task_tags', 'task_completions', 'settings'];
+        for (const table of tables) {
+          await db.execute(`DROP TABLE IF EXISTS ${table}`);
+        }
+        
+        // Re-initialize schema and data
+        // Split schema into statements
+        const schemaStatements = SCHEMA.split(';')
+          .map((stmt) => stmt.trim())
+          .filter((stmt) => stmt.length > 0);
+
+        for (const statement of schemaStatements) {
+          await db.execute(statement);
+        }
+
+        // Split initial data into statements
+        const initialDataStatements = INITIAL_DATA.split(';')
+          .map((stmt) => stmt.trim())
+          .filter((stmt) => stmt.length > 0);
+
+        for (const statement of initialDataStatements) {
+          await db.execute(statement);
+        }
+      } catch (error) {
+        throw new Error(`Failed to reset database: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    },
   };
 }

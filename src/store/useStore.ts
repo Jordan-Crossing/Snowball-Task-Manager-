@@ -68,6 +68,7 @@ interface AppStore {
   updateTaskTags: (taskId: number, tagIds: number[]) => Promise<void>;
   
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
+  resetDatabase: () => Promise<void>;
 
   // ===== Navigation State =====
   currentView: View;
@@ -511,9 +512,30 @@ export const useStore = create<AppStore>()(
       },
 
       toggleTaskFlag: async (id) => {
-        const task = get().tasks.find(t => t.id === id);
+        const state = get();
+        const tasks = state.tasks;
+        const task = tasks.find(t => t.id === id);
+        
         if (task) {
-          await get().updateTask(id, { flagged_for_today: !task.flagged_for_today });
+          const newFlaggedState = !task.flagged_for_today;
+          
+          // Helper to find all descendants
+          const getDescendants = (parentId: number): number[] => {
+            const children = tasks.filter(t => t.parent_task_id === parentId && !t.deleted_at);
+            let descendants: number[] = [];
+            children.forEach(child => {
+              descendants.push(child.id);
+              descendants = [...descendants, ...getDescendants(child.id)];
+            });
+            return descendants;
+          };
+
+          const idsToUpdate = [id, ...getDescendants(id)];
+          
+          // Update all tasks in the hierarchy
+          for (const taskId of idsToUpdate) {
+            await get().updateTask(taskId, { flagged_for_today: newFlaggedState });
+          }
         }
       },
 
@@ -852,7 +874,7 @@ export const useStore = create<AppStore>()(
           if (updateFields) {
             await db.run(
               `UPDATE settings SET ${updateFields}, updated_at = CURRENT_TIMESTAMP WHERE id = 1`,
-              values
+              [...values]
             );
           }
         } catch (error) {
@@ -861,7 +883,19 @@ export const useStore = create<AppStore>()(
         }
       },
 
-      // ===== Initial Navigation State =====
+      resetDatabase: async () => {
+        const db = get().db;
+        if (!db) return;
+
+        try {
+          await db.reset();
+          window.location.reload();
+        } catch (error) {
+          console.error('Failed to reset database:', error);
+        }
+      },
+
+      // ===== Navigation State =====
       currentView: 'today',
       selectedProjectId: null,
       selectedListId: null,
@@ -870,31 +904,39 @@ export const useStore = create<AppStore>()(
       selectedTagId: null,
       navigationStack: [],
 
-      // Navigation actions
       navigateTo: (view, id) => set((state) => {
+        const stack = [...state.navigationStack];
+        // Don't push if it's the same view
+        if (stack.length === 0 || stack[stack.length - 1].view !== view || stack[stack.length - 1].id !== id) {
+             stack.push({ view: state.currentView, id: state.currentView === 'projects' ? state.selectedProjectId || undefined : undefined });
+        }
+        
         return {
           currentView: view,
-          navigationStack: [...state.navigationStack, { view, id }],
-          selectedProjectId: view === 'projects' ? (id !== undefined ? id : null) : state.selectedProjectId,
-          selectedListId: view === 'lists' ? (id !== undefined ? id : null) : state.selectedListId,
-          selectedTagId: view === 'tags' ? (id !== undefined ? id : null) : state.selectedTagId,
+          selectedProjectId: view === 'projects' && id ? id : state.selectedProjectId,
+          selectedListId: view === 'lists' && id ? id : state.selectedListId,
+          selectedTagId: view === 'tags' && id ? id : state.selectedTagId,
+          navigationStack: stack,
+          detailPanelOpen: false
         };
       }),
 
       goBack: () => set((state) => {
-        if (state.navigationStack.length <= 1) return state;
-        const newStack = state.navigationStack.slice(0, -1);
-        const previousState = newStack[newStack.length - 1];
+        const stack = [...state.navigationStack];
+        const prev = stack.pop();
+        if (!prev) return {};
+        
         return {
-          currentView: previousState.view as View,
-          navigationStack: newStack,
+          currentView: prev.view as View,
+          selectedProjectId: prev.view === 'projects' ? prev.id || null : state.selectedProjectId,
+          navigationStack: stack
         };
       }),
 
       selectProject: (projectId) => set({ selectedProjectId: projectId }),
       selectList: (listId) => set({ selectedListId: listId }),
-      selectTask: (taskId, options) => set((state) => {
-        const { multi } = options || {};
+      selectTask: (taskId, options = {}) => set((state) => {
+        const { multi = false } = options;
         
         if (taskId === null) {
            return { selectedTaskId: null, selectedTaskIds: [], detailPanelOpen: false };
@@ -925,6 +967,7 @@ export const useStore = create<AppStore>()(
           detailPanelOpen: !!newSelectedTaskId 
         };
       }),
+
       selectTag: (tagId) => set({ selectedTagId: tagId }),
 
       // ===== Initial UI State =====
@@ -953,3 +996,4 @@ export const useStore = create<AppStore>()(
     }
   )
 );
+

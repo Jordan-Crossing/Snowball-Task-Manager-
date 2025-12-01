@@ -197,7 +197,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }}
     >
       {/* Header */}
-      <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ 
+        p: 2.5, 
+        borderBottom: '1px solid', 
+        borderColor: 'divider',
+        paddingTop: 'calc(env(safe-area-inset-top) + 20px)',
+      }}>
         <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
           ❄️ Snowball
         </Typography>

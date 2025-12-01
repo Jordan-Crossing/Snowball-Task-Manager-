@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Box, CircularProgress, CssBaseline, Drawer, Typography } from '@mui/material'
+import { App as CapacitorApp } from '@capacitor/app'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { getDatabase } from './db'
 import { AppShell, TodayView, TaskList, TaskDetail, QuickAddButton, SettingsView, ProjectDetail, TagsView, ProjectsView, ListView, TrashView } from './components'
 import { AddTaskInput } from './components/common/AddTaskInput'
@@ -56,9 +58,82 @@ function AppContentInner() {
     moveTask,
   } = useStore()
 
+  // Handle Android Back Button
+  useEffect(() => {
+    const setupBackButton = async () => {
+      CapacitorApp.addListener('backButton', () => {
+        // 1. Close mobile menu if open
+        if (useStore.getState().mobileMenuOpen) {
+          useStore.getState().setMobileMenuOpen(false);
+          return;
+        }
+        
+        const state = useStore.getState();
+
+        // 2. Close task detail if open
+        if (state.selectedTaskId) {
+          state.selectTask(null);
+          return;
+        }
+
+        // 3. Navigate back to main view from sub-views
+        if (state.selectedProjectId || state.selectedListId || state.selectedTagId) {
+          if (state.selectedProjectId) {
+            state.selectProject(null);
+            state.navigateTo('projects'); // Go back to projects list
+          } else if (state.selectedListId) {
+            state.selectList(null);
+            // Lists view is not a main view, go to today
+            state.navigateTo('today');
+          } else if (state.selectedTagId) {
+            state.selectTag(null);
+            state.navigateTo('tags');
+          }
+          return;
+        }
+
+        // 4. If not on 'today' view, go to 'today'
+        if (state.currentView !== 'today') {
+          state.navigateTo('today');
+          return;
+        }
+
+        // 5. If at root (Today view), open menu instead of exiting
+        if (!state.mobileMenuOpen) {
+           state.setMobileMenuOpen(true);
+           return;
+        }
+      });
+    };
+    
+    setupBackButton();
+    
+    return () => {
+      CapacitorApp.removeAllListeners();
+    };
+  }, []);
+
   // Initialize database
   useEffect(() => {
     const initDb = async () => {
+      // Try to load cached data for instant "Today" view
+      try {
+        const cachedTasks = localStorage.getItem('snowball_tasks_cache');
+        const cachedCompleted = localStorage.getItem('snowball_completed_cache');
+        
+        if (cachedTasks) {
+          const parsedTasks = JSON.parse(cachedTasks);
+          setTasks(parsedTasks);
+        }
+        
+        if (cachedCompleted) {
+          const parsedCompleted = JSON.parse(cachedCompleted);
+          setCompletedToday(new Set(parsedCompleted));
+        }
+      } catch (e) {
+        console.error('Failed to load cached data', e);
+      }
+
       try {
         const database = await getDatabase()
         setDb(database)
@@ -104,6 +179,13 @@ function AppContentInner() {
           if (t.completed) completedIds.add(t.id);
         });
         setCompletedToday(completedIds)
+        
+        // Hide splash screen after data is loaded
+        try {
+          await SplashScreen.hide();
+        } catch (e) {
+          // Ignore error if not on mobile
+        }
       } catch (error) {
         console.error('Failed to initialize database:', error)
       } finally {
@@ -113,6 +195,19 @@ function AppContentInner() {
 
     initDb()
   }, [])
+
+  // Cache "Today" tasks for instant load
+  useEffect(() => {
+    if (tasks.length > 0) {
+      // Cache all tasks to ensure other views work reasonably well too, 
+      // but we could filter for just today if performance becomes an issue
+      localStorage.setItem('snowball_tasks_cache', JSON.stringify(tasks));
+    }
+    
+    if (completedToday.size > 0) {
+      localStorage.setItem('snowball_completed_cache', JSON.stringify(Array.from(completedToday)));
+    }
+  }, [tasks, completedToday])
 
   // Check for day change and reset repeating tasks
   useEffect(() => {
@@ -317,8 +412,8 @@ function AppContentInner() {
   const cooldownTasks = activeTasks.filter(task => task.list_id === cooldownList?.id)
   const todayTasks = activeTasks.filter(task => task.flagged_for_today)
 
-  // Inbox should not show flagged tasks (they move to Today)
-  const inboxTasks = activeTasks.filter(task => task.list_id === inboxList?.id && !task.flagged_for_today)
+  // Inbox should not show flagged tasks (they move to Today) or tasks assigned to a project
+  const inboxTasks = activeTasks.filter(task => task.list_id === inboxList?.id && !task.flagged_for_today && !task.project_id)
 
   // Calculate morning/cooldown completion status
   const morningTasksComplete = morningTasks.length > 0 && morningTasks.every(t => completedToday.has(t.id))
