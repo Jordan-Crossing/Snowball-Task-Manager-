@@ -69,6 +69,7 @@ interface AppStore {
   
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
   resetDatabase: () => Promise<void>;
+  reloadAllData: () => Promise<void>;
 
   // ===== Navigation State =====
   currentView: View;
@@ -892,6 +893,53 @@ export const useStore = create<AppStore>()(
           window.location.reload();
         } catch (error) {
           console.error('Failed to reset database:', error);
+        }
+      },
+
+      reloadAllData: async () => {
+        const db = get().db;
+        if (!db) return;
+
+        try {
+          // Reload all data from database
+          const [tasks, settings, lists, projects, tags, taskTagRows] = await Promise.all([
+            db.all<Task>('SELECT * FROM tasks'),
+            db.get<Settings>('SELECT * FROM settings WHERE id = 1'),
+            db.all<List>('SELECT * FROM lists ORDER BY sort_order'),
+            db.all<Project>('SELECT * FROM projects ORDER BY name'),
+            db.all<Tag>('SELECT * FROM tags ORDER BY name'),
+            db.all<{ task_id: number; tag_id: number }>('SELECT * FROM task_tags'),
+          ]);
+
+          // Build taskTags map
+          const taskTags = new Map<number, number[]>();
+          for (const row of taskTagRows) {
+            const existing = taskTags.get(row.task_id) || [];
+            existing.push(row.tag_id);
+            taskTags.set(row.task_id, existing);
+          }
+
+          // Get today's completions for repeating tasks
+          const today = new Date().toISOString().split('T')[0];
+          const completions = await db.all<{ task_id: number }>(
+            'SELECT task_id FROM task_completions WHERE completed_date = ?',
+            [today]
+          );
+          const completedToday = new Set(completions.map(c => c.task_id));
+
+          set({
+            tasks,
+            settings: settings || null,
+            lists,
+            projects,
+            tags,
+            taskTags,
+            completedToday,
+          });
+
+          console.log('[Store] Reloaded all data from database');
+        } catch (error) {
+          console.error('Failed to reload data:', error);
         }
       },
 
