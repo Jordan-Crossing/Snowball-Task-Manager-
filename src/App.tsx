@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Box, CircularProgress, CssBaseline, Drawer, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, CssBaseline, Drawer, Typography } from '@mui/material'
 import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { getDatabase } from './db'
@@ -18,6 +18,7 @@ function AppContentInner() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [creatingSubtask, setCreatingSubtask] = useState(false)
+  const [initError, setInitError] = useState<string | null>(null)
 
   const {
     db,
@@ -188,6 +189,13 @@ function AppContentInner() {
         }
       } catch (error) {
         console.error('Failed to initialize database:', error)
+        setInitError(error instanceof Error ? error.message : 'Database initialization failed')
+        // Hide splash screen even on error so user sees feedback
+        try {
+          await SplashScreen.hide();
+        } catch (e) {
+          // Ignore if not on mobile
+        }
       } finally {
         setLoading(false)
       }
@@ -250,8 +258,8 @@ function AppContentInner() {
     if (currentView === 'lists' && selectedListId) {
       listId = selectedListId;
       const list = lists.find(l => l.id === listId);
-      // Default to repeating for Warmup/Cooldown lists
-      if (list && (list.type === 'warmup' || list.type === 'cooldown')) {
+      // Default to repeating for Morning/Cooldown lists
+      if (list && (list.type === 'morning' || list.type === 'cooldown')) {
          isRepeating = true;
       }
     } else if (currentView === 'projects' && selectedProjectId) {
@@ -393,6 +401,16 @@ function AppContentInner() {
   }, [creatingSubtask, selectedTaskId, selectedTask, tasks.length, tags, db, addTask, updateTask, addTag, updateTaskTags, setTasks]);
 
 
+  if (initError) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', p: 3 }}>
+        <Typography color="error" variant="h6" gutterBottom>Database Error</Typography>
+        <Typography color="text.secondary" align="center" sx={{ mb: 2 }}>{initError}</Typography>
+        <Button variant="contained" onClick={() => window.location.reload()}>Retry</Button>
+      </Box>
+    )
+  }
+
   if (loading || !dbInitialized) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -404,11 +422,11 @@ function AppContentInner() {
   // Filter tasks for different views
   const activeTasks = tasks.filter(t => !t.deleted_at);
   
-  const warmupList = lists.find(l => l.type === 'warmup')
+  const morningList = lists.find(l => l.type === 'morning')
   const cooldownList = lists.find(l => l.type === 'cooldown')
   const inboxList = lists.find(l => l.type === 'inbox')
 
-  const morningTasks = activeTasks.filter(task => task.list_id === warmupList?.id)
+  const morningTasks = activeTasks.filter(task => task.list_id === morningList?.id)
   const cooldownTasks = activeTasks.filter(task => task.list_id === cooldownList?.id)
   const todayTasks = activeTasks.filter(task => task.flagged_for_today)
 
@@ -455,6 +473,8 @@ function AppContentInner() {
         tags={tags}
         inboxCount={inboxTasks.length}
         detailPanel={taskDetailPanel}
+        morningList={morningList}
+        cooldownList={cooldownList}
       >
         {currentView === 'today' && (
           <TodayView

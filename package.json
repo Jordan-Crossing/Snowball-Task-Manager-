@@ -32,10 +32,12 @@
     "@mui/icons-material": "^7.3.5",
     "@mui/material": "^7.3.5",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/uuid": "^10.0.0",
     "better-sqlite3": "^12.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sql.js": "^1.13.0",
+    "uuid": "^13.0.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

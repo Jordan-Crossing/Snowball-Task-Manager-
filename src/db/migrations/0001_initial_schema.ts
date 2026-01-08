@@ -14,10 +14,6 @@ import {
   TAGS_TABLE,
   TASK_TAGS_TABLE,
   TASK_TAGS_INDEX,
-  DEVICE_INFO_TABLE,
-  SYNC_LOG_TABLE,
-  SYNC_LOG_INDEX,
-  SYNC_HISTORY_TABLE,
   pragmaStatements,
 } from '../schema';
 
@@ -45,18 +41,9 @@ export const migration: Migration = {
     TAGS_TABLE,
     TASK_TAGS_TABLE,
     TASK_TAGS_INDEX,
-
-    // Sync
-    DEVICE_INFO_TABLE,
-    SYNC_LOG_TABLE,
-    SYNC_LOG_INDEX,
-    SYNC_HISTORY_TABLE,
   ],
 
   down: [
-    'DROP TABLE IF EXISTS sync_history',
-    'DROP TABLE IF EXISTS sync_log',
-    'DROP TABLE IF EXISTS device_info',
     'DROP TABLE IF EXISTS task_tags',
     'DROP TABLE IF EXISTS tags',
     'DROP TABLE IF EXISTS task_completions',

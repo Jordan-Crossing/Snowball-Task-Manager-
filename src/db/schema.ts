@@ -14,10 +14,6 @@ export {
   TAGS_TABLE,
   TASK_TAGS_TABLE,
   TASK_TAGS_INDEX,
-  DEVICE_INFO_TABLE,
-  SYNC_LOG_TABLE,
-  SYNC_LOG_INDEX,
-  SYNC_HISTORY_TABLE,
   seedData,
   pragmaStatements,
   allSchemaStatements,
@@ -34,10 +30,6 @@ import {
   TAGS_TABLE,
   TASK_TAGS_TABLE,
   TASK_TAGS_INDEX,
-  DEVICE_INFO_TABLE,
-  SYNC_LOG_TABLE,
-  SYNC_LOG_INDEX,
-  SYNC_HISTORY_TABLE,
   seedData,
 } from './schema/index';
 
@@ -66,17 +58,25 @@ ${TAGS_TABLE}
 ${TASK_TAGS_TABLE}
 
 ${TASK_TAGS_INDEX}
-
-${DEVICE_INFO_TABLE}
-
-${SYNC_LOG_TABLE}
-
-${SYNC_LOG_INDEX}
-
-${SYNC_HISTORY_TABLE}
 `;
 
 /**
- * Initial data for legacy usage
+ * Initial data for legacy usage (web.ts)
+ * Includes settings and system lists with safe INSERT patterns
  */
-export const INITIAL_DATA = seedData.join('\n');
+export const INITIAL_DATA = `
+${seedData.join('\n')}
+
+-- Create default lists (only if they don't exist by type)
+INSERT INTO lists (name, type, is_repeating, sort_order)
+SELECT 'Morning', 'morning', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM lists WHERE type = 'morning');
+
+INSERT INTO lists (name, type, is_repeating, sort_order)
+SELECT 'Cooldown', 'cooldown', 1, 2
+WHERE NOT EXISTS (SELECT 1 FROM lists WHERE type = 'cooldown');
+
+INSERT INTO lists (name, type, is_repeating, sort_order)
+SELECT 'Inbox', 'inbox', 0, 3
+WHERE NOT EXISTS (SELECT 1 FROM lists WHERE type = 'inbox');
+`;

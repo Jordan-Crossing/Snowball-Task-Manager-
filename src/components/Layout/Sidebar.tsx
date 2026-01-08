@@ -30,7 +30,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
 import type { AppState } from './useAppState';
-import type { Project } from '../../db/types';
+import type { Project, List as ListType } from '../../db/types';
 
 interface SidebarProps {
   state: AppState;
@@ -41,6 +41,8 @@ interface SidebarProps {
   onMoveTaskToProject?: (taskId: number, projectId: number) => void;
   onDeleteTask?: (taskId: number) => void;
   inboxCount?: number;
+  morningList?: ListType;
+  cooldownList?: ListType;
 }
 
 interface ProjectItemProps {
@@ -177,6 +179,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onMoveTaskToProject,
   onDeleteTask,
   inboxCount = 0,
+  morningList,
+  cooldownList,
 }) => {
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [tagsExpanded, setTagsExpanded] = useState(false);
@@ -257,22 +261,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <Divider />
 
-      {/* Lists Section */}
+      {/* Lists Section - Morning/Cooldown are permanent UI elements */}
       <List sx={{ flex: 0 }}>
-        {lists?.filter(l => l.type !== 'inbox').map((list) => (
+        {/* Morning - Always shown */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={state.currentView === 'lists' && state.selectedListId === morningList?.id}
+            onClick={() => morningList && onNavigate('lists', morningList.id)}
+            disabled={!morningList}
+          >
+            <ListItemIcon>
+              <WbSunnyIcon />
+            </ListItemIcon>
+            <ListItemText primary="Morning" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Cooldown - Always shown */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={state.currentView === 'lists' && state.selectedListId === cooldownList?.id}
+            onClick={() => cooldownList && onNavigate('lists', cooldownList.id)}
+            disabled={!cooldownList}
+          >
+            <ListItemIcon>
+              <BedtimeIcon />
+            </ListItemIcon>
+            <ListItemText primary="Cooldown" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Custom lists only - dynamically rendered */}
+        {lists?.filter(l => l.type === 'custom').map((list) => (
           <ListItem key={list.id} disablePadding>
             <ListItemButton
               selected={state.currentView === 'lists' && state.selectedListId === list.id}
               onClick={() => onNavigate('lists', list.id)}
             >
               <ListItemIcon>
-                {list.type === 'warmup' ? (
-                  <WbSunnyIcon />
-                ) : list.type === 'cooldown' ? (
-                  <BedtimeIcon />
-                ) : (
-                  <ListIcon />
-                )}
+                <ListIcon />
               </ListItemIcon>
               <ListItemText primary={list.name} />
             </ListItemButton>

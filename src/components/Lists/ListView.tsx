@@ -39,7 +39,7 @@ export const ListView: React.FC<ListViewProps> = ({
 
   const getListIcon = () => {
     switch (list.type) {
-      case 'warmup': return <WbSunnyIcon />;
+      case 'morning': return <WbSunnyIcon />;
       case 'cooldown': return <NightsStayIcon />;
       case 'inbox': return <InboxIcon />;
       default: return <AssignmentIcon />;

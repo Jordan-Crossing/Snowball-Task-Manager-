@@ -8,7 +8,7 @@ import { useResponsive } from '../../hooks';
 import { MobileLayout } from './MobileLayout';
 import { DesktopLayout } from './DesktopLayout';
 import { useStore } from '../../store/useStore';
-import type { Project } from '../../db/types';
+import type { Project, List } from '../../db/types';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -20,6 +20,8 @@ interface AppShellProps {
   onMoveTaskToProject?: (taskId: number, projectId: number) => Promise<void>;
   onDeleteTask?: (taskId: number) => void;
   inboxCount?: number;
+  morningList?: List;
+  cooldownList?: List;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({
@@ -32,6 +34,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   onMoveTaskToProject,
   onDeleteTask,
   inboxCount,
+  morningList,
+  cooldownList,
 }) => {
   const { isMobile, isDesktop } = useResponsive();
 
@@ -71,6 +75,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         projects={projects}
         lists={lists}
         tags={tags}
+        morningList={morningList}
+        cooldownList={cooldownList}
       >
         {children}
       </MobileLayout>
@@ -90,6 +96,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         tags={tags}
         detailPanel={detailPanel}
         inboxCount={inboxCount}
+        morningList={morningList}
+        cooldownList={cooldownList}
       >
         {children}
       </DesktopLayout>
@@ -108,6 +116,8 @@ export const AppShell: React.FC<AppShellProps> = ({
       projects={projects}
       lists={lists}
       tags={tags}
+      morningList={morningList}
+      cooldownList={cooldownList}
     >
       {children}
     </MobileLayout>

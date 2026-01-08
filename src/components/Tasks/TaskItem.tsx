@@ -627,10 +627,10 @@ export const TaskItem: React.FC<TaskItemProps> = React.memo(({
               <ListItemText>Edit</ListItemText>
             </MenuItem>
 
-            {!task.deleted_at && lists.filter(l => ['warmup', 'cooldown', 'inbox'].includes(l.type) && l.id !== task.list_id).length > 0 && (
+            {!task.deleted_at && lists.filter(l => ['morning', 'cooldown', 'inbox'].includes(l.type) && l.id !== task.list_id).length > 0 && (
               <Box>
                 <Divider />
-                {lists.filter(l => ['warmup', 'cooldown', 'inbox'].includes(l.type) && l.id !== task.list_id).map(list => (
+                {lists.filter(l => ['morning', 'cooldown', 'inbox'].includes(l.type) && l.id !== task.list_id).map(list => (
                   <MenuItem key={list.id} onClick={(e) => {
                     handleMenuClose(e);
                     updateTask(task.id, { list_id: list.id });

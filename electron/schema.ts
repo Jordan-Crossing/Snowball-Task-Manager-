@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS lists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('warmup', 'cooldown', 'inbox', 'custom')),
+  type TEXT NOT NULL CHECK (type IN ('morning', 'cooldown', 'inbox', 'custom')),
   is_repeating BOOLEAN NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -96,10 +96,16 @@ export const INITIAL_DATA = `
 INSERT OR IGNORE INTO settings (id, wake_up_time, cooldown_time, sleep_time)
 VALUES (1, '06:00', '18:00', '22:00');
 
--- Create default lists
-INSERT OR IGNORE INTO lists (name, type, is_repeating, sort_order)
-VALUES
-  ('Warmup', 'warmup', 1, 1),
-  ('Cooldown', 'cooldown', 1, 2),
-  ('Inbox', 'inbox', 0, 3);
+-- Create default lists (only if they don't exist)
+INSERT INTO lists (name, type, is_repeating, sort_order)
+SELECT 'Morning', 'morning', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM lists WHERE type = 'morning');
+
+INSERT INTO lists (name, type, is_repeating, sort_order)
+SELECT 'Cooldown', 'cooldown', 1, 2
+WHERE NOT EXISTS (SELECT 1 FROM lists WHERE type = 'cooldown');
+
+INSERT INTO lists (name, type, is_repeating, sort_order)
+SELECT 'Inbox', 'inbox', 0, 3
+WHERE NOT EXISTS (SELECT 1 FROM lists WHERE type = 'inbox');
 `;

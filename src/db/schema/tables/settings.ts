@@ -9,10 +9,6 @@ CREATE TABLE IF NOT EXISTS settings (
   wake_up_time TEXT,
   cooldown_time TEXT,
   sleep_time TEXT,
-  -- Sync settings (default: no sync)
-  sync_mode TEXT DEFAULT 'none' CHECK (sync_mode IN ('none', 'host', 'client')),
-  sync_server_address TEXT,
-  sync_server_token TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;

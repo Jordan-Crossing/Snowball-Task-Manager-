@@ -1,5 +1,5 @@
 /**
- * Hook to get warmup/morning repeating tasks
+ * Hook to get morning repeating tasks
  */
 
 import { useMemo } from 'react';
@@ -11,9 +11,9 @@ export function useMorningTasks(): Task[] {
   const lists = useStore((state) => state.lists);
 
   return useMemo(() => {
-    const warmupList = lists.find(l => l.type === 'warmup');
-    if (!warmupList) return [];
+    const morningList = lists.find(l => l.type === 'morning');
+    if (!morningList) return [];
 
-    return tasks.filter(task => task.list_id === warmupList.id && !task.project_id);
+    return tasks.filter(task => task.list_id === morningList.id && !task.project_id);
   }, [tasks, lists]);
 }

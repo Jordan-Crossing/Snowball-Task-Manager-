@@ -53,6 +53,14 @@ export async function getDatabase(): Promise<DatabaseInterface> {
     return dbInstance;
   }
 
+  // Log platform detection for debugging
+  console.log('[DB] Platform detection:', {
+    isElectron: isElectron(),
+    isCapacitorNative: isCapacitorNative(),
+    platform: typeof Capacitor !== 'undefined' ? Capacitor.getPlatform() : 'unknown',
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+  });
+
   try {
     if (isElectron()) {
       // Electron: Use better-sqlite3 for native file-based SQLite

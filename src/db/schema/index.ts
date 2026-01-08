@@ -8,7 +8,6 @@ import { LISTS_TABLE } from './tables/lists';
 import { PROJECTS_TABLE } from './tables/projects';
 import { TASKS_TABLE, TASKS_INDEXES, TASK_COMPLETIONS_TABLE } from './tables/tasks';
 import { TAGS_TABLE, TASK_TAGS_TABLE, TASK_TAGS_INDEX } from './tables/tags';
-import { DEVICE_INFO_TABLE, SYNC_LOG_TABLE, SYNC_LOG_INDEX, SYNC_HISTORY_TABLE } from './tables/sync';
 import { seedData } from './seed';
 
 // Re-export all tables
@@ -22,10 +21,6 @@ export {
   TAGS_TABLE,
   TASK_TAGS_TABLE,
   TASK_TAGS_INDEX,
-  DEVICE_INFO_TABLE,
-  SYNC_LOG_TABLE,
-  SYNC_LOG_INDEX,
-  SYNC_HISTORY_TABLE,
   seedData,
 };
 
@@ -45,8 +40,4 @@ export const allSchemaStatements: string[] = [
   TAGS_TABLE,
   TASK_TAGS_TABLE,
   TASK_TAGS_INDEX,
-  DEVICE_INFO_TABLE,
-  SYNC_LOG_TABLE,
-  SYNC_LOG_INDEX,
-  SYNC_HISTORY_TABLE,
 ];

@@ -5,7 +5,7 @@
 
 import { SQLiteConnection, SQLiteDBConnection, CapacitorSQLite } from '@capacitor-community/sqlite';
 import type { Database as DatabaseInterface } from './types';
-import { SCHEMA, INITIAL_DATA } from './schema';
+import { allSchemaStatements, seedData, pragmaStatements } from './schema';
 
 /**
  * Initialize and return a Capacitor SQLite database instance
@@ -31,46 +31,67 @@ export async function createCapacitorDB(dbName: string): Promise<DatabaseInterfa
     // Open the database
     await db.open();
 
-    // Enable foreign keys
-    await db.execute('PRAGMA foreign_keys = ON;');
+    // Execute pragma statements
+    for (const pragma of pragmaStatements) {
+      await db.execute(pragma);
+    }
 
-    // Initialize schema - split into individual statements
-    const schemaStatements = SCHEMA.split(';')
-      .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0);
-
-    // Execute schema statements
-    for (const statement of schemaStatements) {
+    // Execute schema statements (each is a separate CREATE TABLE/INDEX)
+    for (const statement of allSchemaStatements) {
       try {
         await db.execute(statement);
       } catch (error) {
-        // Log but don't throw on existing table errors
         const errorMsg = error instanceof Error ? error.message : String(error);
+        // Only ignore "already exists" errors - throw all others
         if (!errorMsg.includes('already exists')) {
-          console.error('Schema error:', error);
+          console.error('Schema error:', statement, error);
+          throw error;
         }
       }
     }
 
-    // Initialize default data
-    const initialDataStatements = INITIAL_DATA.split(';')
-      .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0);
-
-    // Execute initial data statements
-    for (const statement of initialDataStatements) {
+    // Execute seed data statements (each is a separate INSERT)
+    for (const statement of seedData) {
       try {
         await db.execute(statement);
       } catch (error) {
-        // Log but don't throw on constraint violations
         const errorMsg = error instanceof Error ? error.message : String(error);
+        // Only ignore constraint violations (data already exists)
         if (
           !errorMsg.includes('UNIQUE constraint failed') &&
-          !errorMsg.includes('AUTOINCREMENT')
+          !errorMsg.includes('AUTOINCREMENT') &&
+          !errorMsg.includes('already exists')
         ) {
-          console.error('Initial data error:', error);
+          console.error('Seed data error:', statement, error);
+          throw error;
         }
       }
+    }
+
+    // Ensure each system list type exists (check by TYPE, not by count)
+    // This prevents duplicates by only inserting if no list of that type exists
+    const systemLists = [
+      { type: 'morning', name: 'Morning', isRepeating: 1, sortOrder: 1 },
+      { type: 'cooldown', name: 'Cooldown', isRepeating: 1, sortOrder: 2 },
+      { type: 'inbox', name: 'Inbox', isRepeating: 0, sortOrder: 3 },
+    ];
+
+    for (const list of systemLists) {
+      const existing = await db.query('SELECT id FROM lists WHERE type = ?', [list.type]);
+      if (!existing.values || existing.values.length === 0) {
+        console.log(`Creating ${list.type} list (not found)`);
+        await db.run(
+          `INSERT INTO lists (name, type, is_repeating, sort_order) VALUES (?, ?, ?, ?)`,
+          [list.name, list.type, list.isRepeating, list.sortOrder]
+        );
+      }
+    }
+
+    // Verify settings exist
+    const verifySettings = await db.query('SELECT id FROM settings WHERE id = 1');
+    if (!verifySettings.values || verifySettings.values.length === 0) {
+      console.log('Creating default settings (not found)');
+      await db.execute(`INSERT INTO settings (id, wake_up_time, cooldown_time, sleep_time) VALUES (1, '06:00', '18:00', '22:00')`);
     }
   } catch (error) {
     if (db) {
@@ -203,29 +224,40 @@ export async function createCapacitorDB(dbName: string): Promise<DatabaseInterfa
         throw new Error('Database connection is closed');
       }
       try {
-        // Drop all tables
-        const tables = ['tasks', 'projects', 'lists', 'tags', 'task_tags', 'task_completions', 'settings'];
+        // Drop all tables in correct order (respecting FK constraints)
+        const tables = [
+          'task_tags', 'task_completions', 'tags',
+          'tasks', 'projects', 'lists', 'settings'
+        ];
         for (const table of tables) {
           await db.execute(`DROP TABLE IF EXISTS ${table}`);
         }
-        
-        // Re-initialize schema and data
-        // Split schema into statements
-        const schemaStatements = SCHEMA.split(';')
-          .map((stmt) => stmt.trim())
-          .filter((stmt) => stmt.length > 0);
 
-        for (const statement of schemaStatements) {
+        // Re-initialize schema (using array of statements)
+        for (const statement of allSchemaStatements) {
           await db.execute(statement);
         }
 
-        // Split initial data into statements
-        const initialDataStatements = INITIAL_DATA.split(';')
-          .map((stmt) => stmt.trim())
-          .filter((stmt) => stmt.length > 0);
-
-        for (const statement of initialDataStatements) {
+        // Re-initialize seed data (settings only - using array of statements)
+        for (const statement of seedData) {
           await db.execute(statement);
+        }
+
+        // Re-initialize system lists (check by type to prevent duplicates)
+        const systemLists = [
+          { type: 'morning', name: 'Morning', isRepeating: 1, sortOrder: 1 },
+          { type: 'cooldown', name: 'Cooldown', isRepeating: 1, sortOrder: 2 },
+          { type: 'inbox', name: 'Inbox', isRepeating: 0, sortOrder: 3 },
+        ];
+
+        for (const list of systemLists) {
+          const existing = await db.query('SELECT id FROM lists WHERE type = ?', [list.type]);
+          if (!existing.values || existing.values.length === 0) {
+            await db.run(
+              `INSERT INTO lists (name, type, is_repeating, sort_order) VALUES (?, ?, ?, ?)`,
+              [list.name, list.type, list.isRepeating, list.sortOrder]
+            );
+          }
         }
       } catch (error) {
         throw new Error(`Failed to reset database: ${error instanceof Error ? error.message : String(error)}`);

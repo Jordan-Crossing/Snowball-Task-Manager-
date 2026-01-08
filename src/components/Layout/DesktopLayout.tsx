@@ -7,7 +7,7 @@ import React from 'react';
 import { Box } from '@mui/material';
 import { Sidebar } from './Sidebar';
 import type { AppState } from './useAppState';
-import type { Project } from '../../db/types';
+import type { Project, List } from '../../db/types';
 
 interface DesktopLayoutProps {
   state: AppState;
@@ -24,6 +24,8 @@ interface DesktopLayoutProps {
   children: React.ReactNode;
   detailPanel?: React.ReactNode;
   inboxCount?: number;
+  morningList?: List;
+  cooldownList?: List;
 }
 
 export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
@@ -38,6 +40,8 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   children,
   detailPanel,
   inboxCount,
+  morningList,
+  cooldownList,
 }) => {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -53,6 +57,8 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
           onMoveTaskToProject={onMoveTaskToProject}
           onDeleteTask={onDeleteTask}
           inboxCount={inboxCount}
+          morningList={morningList}
+          cooldownList={cooldownList}
         />
 
         {/* Miller Columns + Detail Panel */}

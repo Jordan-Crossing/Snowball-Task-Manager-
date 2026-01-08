@@ -103,7 +103,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
   };
 
   const tabs: Array<{ id: TodayTab; label: string; icon: React.ReactNode }> = [
-    { id: 'morning', label: 'Warmup', icon: <WbSunnyIcon fontSize="small" /> },
+    { id: 'morning', label: 'Morning', icon: <WbSunnyIcon fontSize="small" /> },
     { id: 'today', label: 'Today', icon: <TodayIcon fontSize="small" /> },
     { id: 'cooldown', label: 'Cooldown', icon: <NightlightIcon fontSize="small" /> },
   ];
@@ -229,7 +229,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
             {activeTab === 'morning' && (
               <Box>
                 <Typography variant="h5" sx={{ mb: 2, fontWeight: '800', letterSpacing: '-0.5px', background: TAB_GRADIENTS.morning, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', width: 'fit-content' }}>
-                  Morning Warmup
+                  Morning
                 </Typography>
                 <TaskList
                   tasks={morningTasks}
@@ -237,7 +237,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
                   taskTags={taskTags}
                   selectedTaskId={selectedTaskId}
                   completedToday={completedToday}
-                  emptyMessage="No warmup tasks yet"
+                  emptyMessage="No morning tasks yet"
                   hideControls
                   separateCompleted
                 />

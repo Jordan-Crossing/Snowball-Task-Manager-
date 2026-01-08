@@ -4,11 +4,6 @@
  */
 
 /**
- * Sync mode for the application
- */
-export type SyncMode = 'none' | 'host' | 'client';
-
-/**
  * Settings table - Single row table storing app-wide configuration
  */
 export interface Settings {
@@ -16,21 +11,17 @@ export interface Settings {
   wake_up_time?: string; // HH:MM format
   cooldown_time?: string; // HH:MM format
   sleep_time?: string; // HH:MM format
-  // Sync settings
-  sync_mode?: SyncMode; // 'none' | 'host' | 'client'
-  sync_server_address?: string; // For client mode: server address
-  sync_server_token?: string; // Auth token for auto-reconnect
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
 }
 
 /**
- * Lists table - Container for grouping tasks (warmup, cooldown, inbox, custom)
+ * Lists table - Container for grouping tasks (morning, cooldown, inbox, custom)
  */
 export interface List {
   id: number;
   name: string;
-  type: 'warmup' | 'cooldown' | 'inbox' | 'custom';
+  type: 'morning' | 'cooldown' | 'inbox' | 'custom';
   is_repeating: boolean;
   sort_order: number;
   created_at: string;

@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import type { AppState } from './useAppState';
+import type { List } from '../../db/types';
 import { Sidebar } from './Sidebar';
 
 interface MobileLayoutProps {
@@ -29,6 +30,8 @@ interface MobileLayoutProps {
   lists?: Array<{ id: number; name: string } & any>;
   tags?: Array<{ id: number; name: string }>;
   children: React.ReactNode;
+  morningList?: List;
+  cooldownList?: List;
 }
 
 const TAB_BACKGROUNDS = {
@@ -49,6 +52,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   lists = [],
   tags = [],
   children,
+  morningList,
+  cooldownList,
 }) => {
   const theme = useTheme();
   const [headerBackground, setHeaderBackground] = useState<string>('background.paper');
@@ -215,6 +220,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
           tags={tags}
           onMoveTaskToProject={onMoveTaskToProject}
           onDeleteTask={onDeleteTask}
+          morningList={morningList}
+          cooldownList={cooldownList}
         />
       </Drawer>
 

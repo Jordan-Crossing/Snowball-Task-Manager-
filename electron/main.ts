@@ -48,6 +48,37 @@ function initDatabase() {
       console.error('[Main] Error executing INITIAL_DATA:', e);
       // Don't throw here, maybe data already exists or unique constraint
     }
+
+    // Cleanup duplicate system lists
+    console.log('[Main] Checking for duplicate system lists');
+    try {
+      const systemTypes = ['morning', 'cooldown', 'inbox'];
+      const cleanupTransaction = db.transaction(() => {
+        for (const type of systemTypes) {
+          const lists = db!.prepare('SELECT id FROM lists WHERE type = ? ORDER BY id').all(type) as {id: number}[];
+          if (lists.length > 1) {
+            const keepId = lists[0].id;
+            const removeIds = lists.slice(1).map(l => l.id);
+            console.log(`[Main] Merging duplicate ${type} lists: keeping ${keepId}, removing ${removeIds.join(',')}`);
+            
+            // Reassign tasks
+            const updateResult = db!.prepare(
+              `UPDATE tasks SET list_id = ? WHERE list_id IN (${removeIds.map(() => '?').join(',')})`
+            ).run(keepId, ...removeIds);
+            console.log(`[Main] Reassigned ${updateResult.changes} tasks`);
+            
+            // Delete duplicate lists
+            const deleteResult = db!.prepare(
+              `DELETE FROM lists WHERE id IN (${removeIds.map(() => '?').join(',')})`
+            ).run(...removeIds);
+            console.log(`[Main] Deleted ${deleteResult.changes} duplicate lists`);
+          }
+        }
+      });
+      cleanupTransaction();
+    } catch (e) {
+      console.error('[Main] Error cleaning up duplicate lists:', e);
+    }
     
     console.log('[Main] Database initialization complete');
   } catch (error) {

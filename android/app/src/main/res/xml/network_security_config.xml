@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security config for local network sync between desktop and mobile devices.
+
+  This configuration:
+  1. Allows cleartext traffic for fallback/debugging
+  2. Trusts user-installed certificates (for self-signed TLS on local sync server)
+  3. Trusts system certificates for normal HTTPS
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
